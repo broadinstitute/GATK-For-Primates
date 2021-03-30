@@ -44,6 +44,7 @@ The pipeline will determine how best to operate based on the input JSON file. If
 - A reference genome indexed using either bwa or bwa-mem2.
 - An input JSON file listing the reference, the required metadata for each sample, and any optional parameters.
 - Truth SNP and/or INDEL sets, if available.
+- A list of 'scatters', either produced with ScatterIntervalsByNs (as described in the paper) or with the third-party Python tool, [ScaffoldStitcher](https://github.com/ameliahaj/ScaffoldStitcher)
 
 
 #### Software version requirements :
@@ -61,3 +62,4 @@ The pipeline will determine how best to operate based on the input JSON file. If
 - Re-genotyping at the master callset capitalizes on the aforementioned "--merge-contigs-into-num-partitions" parameter in ImportGenomicsDB, plus on the "--include-non-variant-sites" option in GenotypeGVCFs [as implemented in GATK 4.0.12.0](https://github.com/broadinstitute/gatk/releases/tag/4.0.12.0).
 - Code for producing AnalyzeCovariates plots is currently commented out because the GATK4 docker does not have the required R libraries. Is there a docker image that has both R and the gsalib and ggplot2?
 - No error checking/validation of input JSON options is implemented yet. Inputting contradictory options (e.g. mode = initial but with BAM inputs) may cause the workflow to fail.
+- I had to remove "--merge-contigs-into-num-partitions" from GenomicsDBImport because it doesn't work as I expected -- it requires whole contigs versus intervals. I will re-visit this.
