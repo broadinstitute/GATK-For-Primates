@@ -63,3 +63,5 @@ The pipeline will determine how best to operate based on the input JSON file. If
 - Code for producing AnalyzeCovariates plots is currently commented out because the GATK4 docker does not have the required R libraries. Is there a docker image that has both R and the gsalib and ggplot2?
 - No error checking/validation of input JSON options is implemented yet. Inputting contradictory options (e.g. mode = initial but with BAM inputs) may cause the workflow to fail.
 - I had to remove "--merge-contigs-into-num-partitions" from GenomicsDBImport because it doesn't work as I expected -- it requires whole contigs versus intervals. I will re-visit this.
+- Some tasks run on docker, some don't. I'll fix this.
+- I haven't even tried this with Terra yet.
