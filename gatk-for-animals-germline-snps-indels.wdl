@@ -812,7 +812,7 @@ task GenotypeGenomicsDB {
         String docker_image
         String? groupName
     }
-    String final_options = if defined(FinalCallset) then "--interval-padding 100 --include-non-variant-sites\\" else " "
+    String final_options = if defined(FinalCallset) then "--include-non-variant-sites\\" else " "
     command <<<
     set -euo pipefail
 
