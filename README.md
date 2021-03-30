@@ -65,3 +65,5 @@ The pipeline will determine how best to operate based on the input JSON file. If
 - I had to remove "--merge-contigs-into-num-partitions" from GenomicsDBImport because it doesn't work as I expected -- it requires whole contigs versus intervals. I will re-visit this.
 - Some tasks run on docker, some don't. I'll fix this.
 - I haven't even tried this with Terra yet.
+- I made up the scatters in the input JSON, I just split the chr into three parts. They are not separated by blocks of NNNs; hence, this was just to test the functionality rather than the utility of the workflow just by using dummy data.
+- You could add more samples/groups to the input JSON if you wish; there are a few extra dummy samples (two from two other species of golden monkey) in the Google bucket.
