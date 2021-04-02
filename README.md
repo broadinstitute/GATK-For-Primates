@@ -1,3 +1,5 @@
+BG_TEST
+
 # GATK-for-Animals: GATK Best Practices for Variant Calling in Non-Human Animal Genomes
 
 ## IMPORTANT NOTE: THIS IS A PRE-ALPHA WORKFLOW CURRENTLY UNDER DEVELOPMENT!
