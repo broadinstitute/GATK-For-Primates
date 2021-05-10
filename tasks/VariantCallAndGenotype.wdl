@@ -22,7 +22,7 @@ task HaplotypeCaller {
     }
     Float size_input_files = size(ref, "GB") + size(ref_dict, "GB") + size(input_bam, "GB") + size(input_bam_index, "GB") + size(FinalCallset, "GB") + size(FinalCallset_index, "GB")
     Int disk_size = ceil(size_input_files * 1.5) + 20
-    Int command_mem_gb = machine_mem_gb - 1
+    Int command_mem_gb = select_first([machine_mem_gb, 8]) - 1
     String padding = if defined(FinalCallset) then "--interval-padding 100 \\" else " "
     command {
         gatk \
@@ -67,7 +67,7 @@ task GenomicsDBImport {
     }
     Float size_input_files = size(input_gvcfs, "GB")
     Int disk_size = ceil(size_input_files * 2.5) + 20
-    Int command_mem_gb = machine_mem_gb - 1
+    Int command_mem_gb = select_first([machine_mem_gb, 8]) - 1
     #Int merge_contigs_value = if defined(merge_contigs_into_num_partitions) then merge_contigs_into_num_partitions else "0"
     command <<<
     set -euo pipefail
@@ -108,7 +108,7 @@ task GenomicsDBImportFinal {
     }
     Float size_input_files = size(input_gvcfs, "GB")
     Int disk_size = ceil(size_input_files * 2.5) + 20
-    Int command_mem_gb = machine_mem_gb - 1
+    Int command_mem_gb = select_first([machine_mem_gb, 8]) - 1
     command <<<
     set -euo pipefail
 
@@ -152,7 +152,7 @@ task GenotypeGenomicsDB {
     }
     Float size_input_files = size(ref, "GB") + size(ref_dict, "GB") + size(ref_idxs, "GB") + size(input_genomicsdb, "GB") + size(FinalCallset, "GB") + size(FinalCallset_index, "GB")
     Int disk_size = ceil(size_input_files * 2.5) + 20
-    Int command_mem_gb = machine_mem_gb - 1
+    Int command_mem_gb = select_first([machine_mem_gb, 8]) - 1
     String final_options = if defined(FinalCallset) then "--include-non-variant-sites\\" else " "
     command <<<
     set -euo pipefail
