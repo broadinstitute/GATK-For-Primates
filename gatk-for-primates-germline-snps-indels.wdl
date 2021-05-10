@@ -72,7 +72,7 @@ workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
         
         ## Placeholders for runtime/docker info
         String docker_image_gatk = "broadinstitute/gatk:4.2.0.0"
-        String docker_image_bwa_and_samtools = "bioslimcontainers/bwa-samtools:bwa-0.7.17_samtools-1.11"
+        String docker_image_bwa_and_samtools = "broadinstitute/genomes-in-the-cloud"
         String docker_image_python = "python:latest"
 
         #Optional runtime arguments
