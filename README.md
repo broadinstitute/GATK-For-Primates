@@ -1,11 +1,11 @@
-# GATK-for-Animals: GATK Best Practices for Variant Calling in Non-Human Animal Genomes
+# GATK-for-Primates: GATK Best Practices for Variant Calling in Non-Human Primate Genomes
 
 ## IMPORTANT NOTE: THIS IS A PRE-ALPHA WORKFLOW CURRENTLY UNDER DEVELOPMENT!
 
 
 ### Purpose:
 
-This workflow (gatk-for-animals-germline-snps-indels.wdl) facilitates [germline short variant discovery](https://gatk.broadinstitute.org/hc/en-us/articles/360035535932) from whole genomes of non-human animals, following proposed GATK Best Practices for Non-Human Animal Genomes. Capitalizing on new features in GATK4, the pipeline enables base recalibration and variant calling in the absence of 'gold standard' truth and training sets. Though principally designed for mammalian genomes, the pipeline may be adapted for other non-human animal species. Beyond animals, more appropriate GATK Best Practices might be available, e.g. [GATK for Microbes](https://github.com/broadinstitute/GATK-for-Microbes).
+This workflow (gatk-for-primates-germline-snps-indels.wdl) facilitates [germline short variant discovery](https://gatk.broadinstitute.org/hc/en-us/articles/360035535932) from whole genomes of non-human primates, following proposed GATK Best Practices for Non-Human Animal Genomes. Capitalizing on new features in GATK4, the pipeline enables base recalibration and variant calling in the absence of 'gold standard' truth and training sets. Though principally designed for non-human primate data, the pipeline may be adapted for other non-human animal species. Beyond animals, more appropriate GATK Best Practices might be available, e.g. [GATK for Microbes](https://github.com/broadinstitute/GATK-for-Microbes).
 
 ### Modes of operation:
 
