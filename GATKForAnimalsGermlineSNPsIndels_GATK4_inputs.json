@@ -1,8 +1,8 @@
 {
-  "GATKForAnimalsGermlineSNPsIndels_GATK4.mode": "initial",
-  "GATKForAnimalsGermlineSNPsIndels_GATK4.ref": "input/rhiRox_chr21_and_chr22_only.fa",
-  "GATKForAnimalsGermlineSNPsIndels_GATK4.merge_contigs_into_num_partitions": "0",
-  "GATKForAnimalsGermlineSNPsIndels_GATK4.sampleList": [{
+  "GATKForPrimatesGermlineSNPsIndels_GATK4.mode": "initial",
+  "GATKForPrimatesGermlineSNPsIndels_GATK4.ref": "input/rhiRox_chr21_and_chr22_only.fa",
+  "GATKForPrimatesGermlineSNPsIndels_GATK4.merge_contigs_into_num_partitions": "0",
+  "GATKForPrimatesGermlineSNPsIndels_GATK4.sampleList": [{
       "name": "R.bie-2011A089",
       "rgID": "1",
       "rgLB": "R.bie-2011A089",
@@ -40,7 +40,7 @@
     }
   ],
 
-  "GATKForAnimalsGermlineSNPsIndels_GATK4.scatterList": [{
+  "GATKForPrimatesGermlineSNPsIndels_GATK4.scatterList": [{
       "name": "scatter1",
       "intervals": "chr21:1-27800000"
     },
