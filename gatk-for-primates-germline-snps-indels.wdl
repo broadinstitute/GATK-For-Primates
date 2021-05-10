@@ -3,6 +3,8 @@ version development
 ## Define the primary workflow
 workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
 
+    String pipeline_version = "pre-alpha"
+    
     ####################################################################
     ## Initial workflow setup and configuration
     ####################################################################
