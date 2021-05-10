@@ -73,6 +73,11 @@ workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
         String docker_image_gatk = "broadinstitute/gatk:4.2.0.0"
         String docker_image_bwa_and_samtools = "bioslimcontainers/bwa-samtools:bwa-0.7.17_samtools-1.11"
         String docker_image_python = "python:latest"
+
+        #Optional runtime arguments
+        Int? preemptible_tries
+        File? gatk_override
+        String? gatk_docker_override   
     }
 
     ## Set either bwa or bwamem2 index files and execution command; note bwa-mem2 requires change in docker file
