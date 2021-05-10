@@ -1,7 +1,7 @@
 version development
 
 ## Define the primary workflow
-workflow GATKForAnimalsGermlineSNPsIndels_GATK4 {
+workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
 
     ####################################################################
     ## Initial workflow setup and configuration
