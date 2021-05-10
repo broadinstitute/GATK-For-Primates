@@ -54,44 +54,30 @@ import "./tasks/GenerateTSVs.wdl" as GenerateTSVs
 workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
 
     String pipeline_version = "pre-alpha"
-    
-    ####################################################################
-    ## Initial workflow setup and configuration
-    ####################################################################
 
-    ## Workflow inputs
     input {
+        String mode # JSON options: initial / repeat / final
+        Boolean bwamem2 = false # JSON options: true / false; indicating bwa (as bwa mem) or bwamem2 (as bwamem2 mem)
+        Boolean flowcell_patterned = false # JSON options: true / false
+        Int? merge_contigs_into_num_partitions # JSON options: optional parameter for GenomicsDBImport
+        File? truth_set_SNPs # JSON options: optional SNP truth set for VQSR (training set is produced via hard filtering)
+        File? truth_set_INDELs # JSON options: optional INDEL truth set for VQSR (training set is produced via hard filtering)
 
-        ## Collect workflow options from input JSON
-        String mode # Options: initial repeat final
-        Boolean bwamem2 = false # Options: true / false to use either bwa (as bwa mem) or bwamem2 (as bwamem2 mem)
-        Boolean flowcell_patterned = false # Options: true / false to use either bwa (as bwa mem) or bwamem2 (as bwamem2 mem)
-        Int? merge_contigs_into_num_partitions # Option to speed up GenomicsDBImport with large number of contigs
-        File? truth_set_SNPs # Option to provide a SNP truth set for VQSR (training set is produced via hard filtering)
-        File? truth_set_INDELs # Option to provide an INDEL truth set for VQSR (training set is produced via hard filtering)
-
-        ## Collect reference input file
         File ref
 
-        ## Define arrays from input JSON; structural definitions are at the end of workflow
+        ## Define arrays from input JSON; structural definitions are in the structs/structs.wdl file
         Array[sampleInfo] sampleList
         Array[scatterInfo] scatterList
         
-        ## Placeholders for when I add runtime/docker info
-        ## Is it just me or has the 'Genomes in the Cloud' docker from Broad not been updated
-        ## in three years? https://hub.docker.com/r/broadinstitute/genomes-in-the-cloud
-        ## So using this one instead for bwa and samtools
+        ## Placeholders for runtime/docker info
         String docker_image_gatk = "broadinstitute/gatk:4.2.0.0"
         String docker_image_bwa_and_samtools = "bioslimcontainers/bwa-samtools:bwa-0.7.17_samtools-1.11"
         String docker_image_python = "python:latest"
-
     }
 
-    ## Determine correct reference index files depending on version of bwa is being used
+    ## Set either bwa or bwamem2 index files and execution command; note bwa-mem2 requires change in docker file
     File ref_dict = sub(ref, ".fa", ".dict")
     Array[File] ref_idxs = if bwamem2 then prefix(ref + ".", ["fai", "amb", "ann", "pac", "0123","bwt.2bit.64"]) else prefix(ref + ".", ["fai", "amb", "ann", "pac", "bwt", "sa"])
-
-    ## Set correct command for executing bwa depending on which version is being used
     String execute_bwa = if bwamem2 then "bwa-mem2" else "bwa"
 
     ## Set configuration Booleans as true or false
@@ -100,32 +86,27 @@ workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
     Boolean truth_INDELs = defined(truth_set_INDELs)
 
     ####################################################################
-    ## Initial scatters to collect variables needed later scattering
+    ## Collect scatter, group and sample information from JSON
     ####################################################################
 
-    ## Scatter over scatters to get list of scatter names and intervals
-    ## All this is necessary to sub-scatter later on
+    ## Collect scatter names and intervals
     scatter (sc in scatterList) {
-        call collectScatters {
+        call CollectInfo.collectScatters as collectScatters {
             input:
                 scatterName = sc.name,
                 scatterIntervals = sc.intervals,
         }
     }
 
-    ## Define arrays comprising all scatter names and intervals
-    ## Array[String] allScatterNames = collectScatters.allScatterNames
-    ## Array[String] allScatterIntervals = collectScatters.allScatterIntervals
-
-    ## Scatter over scatters to get list of group and sample names
-    ## All this is necessary to sub-scatter later on and for counting number of samples
+    ## Collect names of groups and samples within them
     scatter (sample in sampleList) {
-        call collectAllGroupNames {
+        call CollectInfo.collectAllGroupNames as collectAllGroupNames {
         input:
             groupName = sample.group,
             sampleName = sample.name,
         }
     }
+
     ## Array[String] allGroupsForScattering = collectAllGroupNames.allGroupNames
     Array[String] allSampleNames = collectAllGroupNames.allSampleNames
 
@@ -136,11 +117,11 @@ workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
     
     if (input_is_fastq && mode == "initial") {
 
-        ## Scatter over samples
+        ## Scatter over each sample
         scatter (sample in sampleList) {
 
             ## Map paired-end reads into BAM file
-            call FastqToBwaMem {
+            call FASTQtoBAM.FastqToBwaMem as FastqToBwaMem {
             input:
                 ref = ref,
                 ref_dict = ref_dict,
@@ -155,9 +136,8 @@ workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
                 docker_image = docker_image_bwa_and_samtools,
             }
 
-            ## Run MarkDuplicatesSpark
-            ## Outputs BAM file sorted by co-ordinate
-            call MarkDuplicatesSpark {
+            ## Run MarkDuplicatesSpark, outputs co-ordinate-sorted BAM
+            call FASTQtoBAM.MarkDuplicatesSpark as MarkDuplicatesSpark {
             input:
                 sampleName = sample.name,
                 input_bam = FastqToBwaMem.output_bam,
@@ -165,9 +145,8 @@ workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
                 docker_image = docker_image_gatk,
             }
 
-            ## Run SetNmMdAndUqTags
-            ## Outputs BAM file with fixed tags
-            call SortAndFixTags {
+            ## Run SetNmMdAndUqTags, outputs BAM with fixed tags
+            call FASTQtoBAM.SortAndFixTags as SortAndFixTags {
             input:
                 ref = ref,
                 ref_dict = ref_dict,
@@ -180,27 +159,16 @@ workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
 
         }
 
-        ## Generate a TSV (not really a 'map' per se) of the newly created BAM files
-        call GenerateMapOfNewBAMs {
+        ## Generate TSV detailing the newly created BAM files
+        call GenerateTSVs.BAMs as GenerateTSVOfNewBAMs {
         input:
-            new_bams = SortAndFixTags.output_bam,
-            new_bam_groups = SortAndFixTags.output_group,
-            new_bam_names = SortAndFixTags.output_name,
-            new_bam_indexes = SortAndFixTags.output_bam_index,
+            bams = SortAndFixTags.output_bam,
+            bam_groups = SortAndFixTags.output_group,
+            bam_names = SortAndFixTags.output_name,
+            bam_indexes = SortAndFixTags.output_bam_index,
         }
 
-        ## Get array of all group names for scattering over later
-        #Array[String] allGroupsForScattering = GenerateMapOfNewBAMs.allGroupsForScattering
-
-        ## Coerce the file from File? into File because Cromwell cannot accommodate
-        ## using files that may not exist in ternary operators (i.e. if-then-else)
-        call coerceFile as coerceMapOfNewBAMs {
-        input:
-            input_file = GenerateMapOfNewBAMs.map,
-        }
-
-        ## Read the new TSV into a map
-        Array[Array[String]] map_of_new_bams = read_tsv(coerceMapOfNewBAMs.coerced)
+        Array[Array[String]] tsv_of_new_bams = read_tsv(GenerateTSVOfNewBAMs.tsv)
 
     }
 
@@ -212,7 +180,7 @@ workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
 
         ## Collect info on each sample from the input JSON file
         scatter (sample in sampleList) {
-            call collectExistingBamInfo {
+            call CollectInfo.collectExistingBamInfo as collectExistingBamInfo {
                 input:
                     sampleName = sample.name,
                     sampleGroup = sample.group,
@@ -228,23 +196,16 @@ workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
         Array[String] existingBAIs = collectExistingBamInfo.allBais
 
         ## Use the arrays to generate a TSV (not really a 'map' per se) of the existing BAM files
-        call GenerateMapOfExistingBAMs {
+        call GenerateTSVs.BAMs as GenerateTSVOfExistingBAMs {
         input:
-            existing_bam_names = existingSamples,
-            existing_bam_groups = existingGroups,
-            existing_bams = existingBAMs,
-            existing_bam_indexes = existingBAIs,
-        }
-
-        ## Coerce the file from File? into File because Cromwell cannot accommodate
-        ## using files that may not exist in ternary operators (i.e. if-then-else)
-        call coerceFile as coerceMapOfExistingBAMs {
-        input:
-            input_file = GenerateMapOfExistingBAMs.map,
+            bam_names = existingSamples,
+            bam_groups = existingGroups,
+            bams = existingBAMs,
+            bam_indexes = existingBAIs,
         }
 
         ## Read the new TSV into a map
-        Array[Array[String]] map_of_existing_bams = read_tsv(coerceMapOfExistingBAMs.coerced)
+        Array[Array[String]] tsv_of_existing_bams = read_tsv(GenerateTSVOfExistingBAMs.tsv)
 
     }
 
@@ -257,10 +218,10 @@ workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
     ## using files that may not exist in ternary operators (i.e. if-then-else)
     call FinalizeInputs {
     input:
-        map_of_new_bams = map_of_new_bams,
-        map_of_existing_bams = map_of_existing_bams,
+        tsv_of_new_bams = tsv_of_new_bams,
+        tsv_of_existing_bams = tsv_of_existing_bams,
     }
-
+    
     ####################################################################
     ## MODE = ANY: Run HaplotypeCaller per sample per scatter interval
     ####################################################################
@@ -273,7 +234,7 @@ workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
 
             ## Call HaplotypeCaller
             ## This calls haplotypes for the current sample at the current scatter
-            call HaplotypeCaller {
+            call VariantCallAndGenotype.HaplotypeCaller as HaplotypeCaller {
             input:
                 ref = ref,
                 ref_dict = ref_dict,
@@ -298,7 +259,7 @@ workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
             ## Now we import all gVCFS per group into a GenomicsDB
             ## There is a bit of a bottleneck here; because we used pair and collect_by_key we cannot send the
             ## .tbi file with the .gvcf.gz -- so this is created again in the task.
-            call GenomicsDBImport {
+            call VariantCallAndGenotype.GenomicsDBImport as GenomicsDBImport {
             input:
                 database_name = "initial_variant_calls_" + pair.left + "_" + sc.name,
                 input_gvcfs = pair.right,
@@ -307,7 +268,7 @@ workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
                 merge_contigs_into_num_partitions = merge_contigs_into_num_partitions,
             }
 
-            call GenotypeGenomicsDB {
+            call VariantCallAndGenotype.GenotypeGenomicsDB as GenotypeGenomicsDB{
             input:
                 ref = ref,
                 ref_dict = ref_dict,
@@ -323,7 +284,7 @@ workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
             ## or when there is no defined SNP truth set, but WDL
             ## makes this difficult because it doesn't like conditionals
             ## -- and it doesn't take very long anyway
-            call HardFilterSNPs {
+            call HardFilter.SNPs as HardFilterSNPs {
             input:
                 ref = ref,
                 ref_dict = ref_dict,
@@ -336,7 +297,7 @@ workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
                 docker_image = docker_image_gatk,
             }
 
-            call HardFilterINDELs {
+            call HardFilter.INDELs as HardFilterINDELs {
             input:
                 ref = ref,
                 ref_dict = ref_dict,
@@ -362,7 +323,7 @@ workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
         ## Gather hard filtered SNPs
         scatter (pair in as_pairs(collect_by_key(zip(flatten(HardFilterSNPs.output_groupName),flatten(HardFilterSNPs.output_filtered_SNPs))))) {
 
-            call GatherHardFilteredVcfs as GatherSNPs {
+            call Gather.HardFilteredVcfs as GatherSNPs {
             input:
                 input_filtered = pair.right,
                 ref_dict = ref_dict,
@@ -374,7 +335,7 @@ workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
 
         scatter (pair in as_pairs(collect_by_key(zip(flatten(HardFilterINDELs.output_groupName),flatten(HardFilterINDELs.output_filtered_INDELs))))) {
 
-            call GatherHardFilteredVcfs as GatherINDELs {
+            call Gather.HardFilteredVcfs as GatherINDELs {
             input:
                 groupName = pair.left,
                 input_filtered = pair.right,
@@ -388,7 +349,7 @@ workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
         scatter (col in FinalizeInputs.finalized_inputs) {
 
             ## Call BaseRecalibrator etc. for each BAM file
-            call BaseRecalibrator {
+            call BQSR.BaseRecalibrator as BaseRecalibrator {
             input:
                     ref = ref,
                     ref_dict = ref_dict,
@@ -416,7 +377,7 @@ workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
 
         scatter (pair in as_pairs(collect_by_key(zip(flatten(GenotypeGenomicsDB.output_groupName),flatten(GenotypeGenomicsDB.output_genotypes))))) {
 
-            call GatherUnfilteredVcfs as GatherUnfilteredSNPs {
+            call Gather.UnfilteredVcfs as GatherUnfilteredSNPs {
             input:
                 groupName = pair.left,
                 input_unfiltered = pair.right,
@@ -429,7 +390,7 @@ workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
 
         }
 
-        call VariantRecalibrator as RecalibrateSNPs {
+        call VQSR.VariantRecalibrator as RecalibrateSNPs {
         input:
             ref = ref,
             ref_dict = ref_dict,
@@ -447,7 +408,7 @@ workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
 
         scatter (pair in as_pairs(collect_by_key(zip(flatten(GenotypeGenomicsDB.output_groupName),flatten(GenotypeGenomicsDB.output_genotypes))))) {
 
-            call GatherUnfilteredVcfs as GatherUnfilteredINDELs {
+            call Gather.UnfilteredVcfs as GatherUnfilteredINDELs {
             input:
                 groupName = pair.left,
                 input_unfiltered = pair.right,
@@ -460,7 +421,7 @@ workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
             }
         } 
 
-        call VariantRecalibrator as RecalibrateINDELs {
+        call VQSR.VariantRecalibrator as RecalibrateINDELs {
         input:
             ref = ref,
             ref_dict = ref_dict,
@@ -480,7 +441,7 @@ workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
    ## MODE = FINAL: Perform final round of variant calls
 ####################################################################
 
-    call ProduceFinalCallset {
+    call ProduceFinalCallset.ProduceFinalCallset as ProduceFinalCallset {
     input:
         ref_dict = ref_dict,
         SNPs_hard_filtered = GatherSNPs.output_filtered_sites_only,
@@ -498,7 +459,7 @@ workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
 
         ## Call HaplotypeCaller
         ## This calls haplotypes within 100 bp -ip of all the final callset sites
-        call HaplotypeCaller as HaplotypeCallerFinal {
+        call VariantCallAndGenotype.HaplotypeCaller as HaplotypeCallerFinal {
         input:
             ref = ref,
             ref_dict = ref_dict,
@@ -514,7 +475,7 @@ workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
 
     }
 
-    call GenomicsDBImportFinal {
+    call VariantCallAndGenotype.GenomicsDBImportFinal as GenomicsDBImportFinal {
     input:
         input_gvcfs = HaplotypeCallerFinal.output_gvcf,
         input_gvcfs_indexes = HaplotypeCallerFinal.output_gvcf_index,
@@ -524,7 +485,7 @@ workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
         docker_image = docker_image_gatk,
     }
 
-    call GenotypeGenomicsDB as GenotypeGenomicsDBFinal {
+    call VariantCallAndGenotype.GenotypeGenomicsDB as GenotypeGenomicsDBFinal {
     input:
         ref = ref,
         ref_dict = ref_dict,
