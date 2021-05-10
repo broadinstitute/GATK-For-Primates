@@ -17,13 +17,14 @@ task VariantRecalibrator {
     }
     Float size_input_files = size(ref, "GB") + size(ref_dict, "GB") + size(ref_idxs, "GB") + size(truth_set, "GB") + size(input_sites, "GB") + size(input_sites_indexes, "GB")
     Int disk_size = ceil(size_input_files * 2) + 20
+    Int command_mem_gb = machine_mem_gb - 1
     command <<<
         set -euo pipefail
 
         if (type == "SNP") {
 
             gatk \
-            VariantRecalibrator \
+            VariantRecalibrator --java-options "-Xmx~{command_mem_gb}G" \
             -V ~{sep=" -V " input_sites} \
             --trust-all-polymorphic \
             -tranche 100.0 -tranche 99.95 -tranche 99.9 -tranche 99.8 -tranche 99.6 -tranche 99.5 -tranche 99.4 -tranche 99.3 -tranche 99.0 -tranche 98.0 -tranche 97.0 -tranche 90.0 \
@@ -38,7 +39,7 @@ task VariantRecalibrator {
 
 
             gatk \
-            ApplyVQSR \
+            ApplyVQSR --java-options "-Xmx~{command_mem_gb}G" \
             -V ~{sep=" -V " input_sites} \
             --recal-file cohort_snps.recal \
             --tranches-file cohort_snps.tranches \
@@ -54,7 +55,7 @@ task VariantRecalibrator {
         if (type == "INDEL") {
 
             gatk \
-            VariantRecalibrator \
+            VariantRecalibrator --java-options "-Xmx~{command_mem_gb}G" \
             -V ~{sep=" -V " input_sites} \
             --trust-all-polymorphic \
             -tranche 100.0 -tranche 99.95 -tranche 99.9 -tranche 99.5 -tranche 99.0 -tranche 97.0 -tranche 96.0 -tranche 95.0 -tranche 94.0 -tranche 93.5 -tranche 93.0 -tranche 92.0 -tranche 91.0 -tranche 90.0 \
@@ -68,7 +69,7 @@ task VariantRecalibrator {
             --tranches-file cohort_indels.tranches
 
             gatk \
-            ApplyVQSR \
+            ApplyVQSR --java-options "-Xmx~{command_mem_gb}G" \
             -V ~{sep=" -V " input_sites} \
             --recal-file cohort_indels.recal \
             --tranches-file cohort_indels.tranches \
