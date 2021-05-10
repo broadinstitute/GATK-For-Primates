@@ -19,17 +19,18 @@ task SNPs {
     }
     Float size_input_files = size(ref, "GB") + size(ref_dict, "GB") + size(input_genotypes, "GB") + size(input_genotypes_index, "GB")
     Int disk_size = ceil(size_input_files * 2.5) + 20
+    Int command_mem_gb = select_first([machine_mem_gb, 8]) - 1
     command {
 
         gatk \
-        SelectVariants \
+        SelectVariants --java-options "-Xmx~{command_mem_gb}G" \
         -R ~{ref} \
         -V ~{input_genotypes} \
         --select-type-to-include SNP \
         -O ~{groupName}_~{scatterName}_SNPs_unfiltered.vcf.gz
 
         gatk \
-        VariantFiltration \
+        VariantFiltration --java-options "-Xmx~{command_mem_gb}G" \
         -R ~{ref} \
         -V ~{groupName}_~{scatterName}_SNPs_unfiltered.vcf.gz \
         -O ~{groupName}_~{scatterName}_SNPs_unfiltered_and_filtered.vcf.gz \
@@ -43,7 +44,7 @@ task SNPs {
         --verbosity ERROR
 
         gatk \
-        SelectVariants \
+        SelectVariants --java-options "-Xmx~{command_mem_gb}G" \
         -R ~{ref} \
         -V ~{groupName}_~{scatterName}_SNPs_unfiltered_and_filtered.vcf.gz \
         -O ~{groupName}_~{scatterName}_SNPs_filtered.vcf.gz \
@@ -82,17 +83,18 @@ task INDELs {
     }
     Float size_input_files = size(ref, "GB") + size(ref_dict, "GB") + size(input_genotypes, "GB") + size(input_genotypes_index, "GB")
     Int disk_size = ceil(size_input_files * 2.5) + 20
+    Int command_mem_gb = select_first([machine_mem_gb, 8]) - 1
     command {
 
         gatk \
-        SelectVariants \
+        SelectVariants --java-options "-Xmx~{command_mem_gb}G" \
         -R ~{ref} \
         -V ~{input_genotypes} \
         --select-type-to-include MIXED \
         -O ~{groupName}_~{scatterName}_INDELs_unfiltered.vcf.gz
 
         gatk \
-        VariantFiltration \
+        VariantFiltration --java-options "-Xmx~{command_mem_gb}G" \
         -R ~{ref} \
         -V ~{groupName}_~{scatterName}_INDELs_unfiltered.vcf.gz \
         -O ~{groupName}_~{scatterName}_INDELs_unfiltered_and_filtered.vcf.gz \
@@ -103,7 +105,7 @@ task INDELs {
         --verbosity ERROR
 
         gatk \
-        SelectVariants \
+        SelectVariants --java-options "-Xmx~{command_mem_gb}G" \
         -R ~{ref} \
         -V ~{groupName}_~{scatterName}_INDELs_unfiltered_and_filtered.vcf.gz \
         -O ~{groupName}_~{scatterName}_INDELs_filtered.vcf.gz \
