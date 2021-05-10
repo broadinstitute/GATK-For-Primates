@@ -13,7 +13,13 @@ task BaseRecalibrator {
         Array[File] input_INDEL_sites
         Array[File] input_INDEL_sites_indexes
         String docker_image
+        Int? machine_mem_gb
+        Int? disk_space_gb
+        Int? preemptible_tries
+        Boolean use_ssd = false
     }
+    Float size_input_files = size(input_bam, "GB") + size(input_bam_index, "GB") + size(ref, "GB") + size(ref_dict, "GB") + size(ref_idxs, "GB")
+    Int disk_size = ceil(size_input_files * 2.5) + 20
     command <<<
         set -euo pipefail
         
@@ -58,5 +64,11 @@ task BaseRecalibrator {
         #File plots = "~{sampleName}.AnalyzeCovariates_plots.pdf"
         File recalibrated_bam = "~{sampleName}_recalibrated.bam"
         File recalibrated_bam_index = "~{sampleName}_recalibrated.bai"
+    }
+    runtime {
+        docker: docker_image
+        memory: select_first([machine_mem_gb, 8]) + " GB"
+        disks: "local-disk " + select_first([disk_space_gb, disk_size]) + if use_ssd then " SSD" else " HDD"
+        preemptible: select_first([preemptible_tries, 5])
     }
 }
