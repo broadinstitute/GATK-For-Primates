@@ -70,13 +70,13 @@ workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
         Array[sampleInfo] sampleList
         Array[scatterInfo] scatterList
         
-        ## Placeholders for runtime/docker info
+        ## Docker containers
         String docker_image_gatk = "broadinstitute/gatk:4.2.0.0"
-        String docker_image_bwa_and_samtools = "broadinstitute/genomes-in-the-cloud"
+        String docker_image_bwa_and_samtools = "broadinstitute/genomes-in-the-cloud:2.3.1-1512499786"
         String docker_image_python = "python:latest"
-        String docker_image_gatk_with_R_and_ggplot = "broadinstitute/genomes-in-the-cloud"
+        String docker_image_gatk_with_R_and_ggplot = "broadinstitute/genomes-in-the-cloud:2.3.1-1512499786"
 
-        #Optional runtime arguments
+        ## Optional runtime arguments
         Int? preemptible_tries
         File? gatk_override
         String? gatk_docker_override   
