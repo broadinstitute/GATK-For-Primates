@@ -17,7 +17,7 @@ task VariantRecalibrator {
     }
     Float size_input_files = size(ref, "GB") + size(ref_dict, "GB") + size(ref_idxs, "GB") + size(truth_set, "GB") + size(input_sites, "GB") + size(input_sites_indexes, "GB")
     Int disk_size = ceil(size_input_files * 2) + 20
-    Int command_mem_gb = machine_mem_gb - 1
+    Int command_mem_gb = select_first([machine_mem_gb, 8]) - 1
     command <<<
         set -euo pipefail
 
@@ -36,7 +36,6 @@ task VariantRecalibrator {
             -O cohort_snps.recal \
             --tranches-file cohort_snps.tranches \
             --use-allele-specific-annotations
-
 
             gatk \
             ApplyVQSR --java-options "-Xmx~{command_mem_gb}G" \
@@ -82,10 +81,9 @@ task VariantRecalibrator {
 
         }
 
-        gatk MakeSitesOnlyVcf \
+        gatk MakeSitesOnlyVcf --java-options "-Xmx~{command_mem_gb}G" \
         -I Cohort_~{type}.recalibrated.vcf.gz \
         -O Cohort_~{type}.recalibrated_sites_only.vcf.gz
-
 
     >>>
     output {
