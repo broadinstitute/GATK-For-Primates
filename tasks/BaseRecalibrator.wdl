@@ -20,12 +20,13 @@ task BaseRecalibrator {
     }
     Float size_input_files = size(input_bam, "GB") + size(input_bam_index, "GB") + size(ref, "GB") + size(ref_dict, "GB") + size(ref_idxs, "GB")
     Int disk_size = ceil(size_input_files * 2.5) + 20
+    Int command_mem_gb = machine_mem_gb - 1
     command <<<
         set -euo pipefail
         
         #GENERATE BEFORE TABLE FROM THE UNRECALIBRATED BAM FILE USING THE HARD FILTERED CALLS FROM THE CURRENT/LATEST PASS
         gatk \
-        BaseRecalibrator \
+        BaseRecalibrator --java-options "-Xmx~{command_mem_gb}G" \
         -I ~{input_bam} \
         -R ~{ref} \
         --known-sites ~{sep=" --known-sites " input_SNP_sites} \
@@ -34,7 +35,7 @@ task BaseRecalibrator {
 
         #APPLY BQSR TO ADJUST THE QUALITY SCORES
         gatk \
-        ApplyBQSR \
+        ApplyBQSR --java-options "-Xmx~{command_mem_gb}G" \
         -I ~{input_bam} \
         -R ~{ref} \
         --bqsr-recal-file ~{sampleName}.before.table \
@@ -42,7 +43,7 @@ task BaseRecalibrator {
 
         #GENERATE AFTER TABLE
         gatk \
-        BaseRecalibrator \
+        BaseRecalibrator --java-options "-Xmx~{command_mem_gb}G" \
         -I ~{sampleName}_recalibrated.bam \
         -R ~{ref} \
         --known-sites ~{sep=" --known-sites " input_SNP_sites} \
@@ -69,6 +70,40 @@ task BaseRecalibrator {
         docker: docker_image
         memory: select_first([machine_mem_gb, 8]) + " GB"
         disks: "local-disk " + select_first([disk_space_gb, disk_size]) + if use_ssd then " SSD" else " HDD"
+        preemptible: select_first([preemptible_tries, 5])
+    }
+}
+
+task AnalyzeCovariates {
+    input {
+        String sampleName
+        File table_before
+        File table_after
+        String docker_image
+        Int? machine_mem_gb
+        Int? disk_space_gb
+        Int? preemptible_tries
+        Boolean use_ssd = false
+    }
+    Int command_mem_gb = machine_mem_gb - 1
+    command <<<
+        set -euo pipefail
+
+        gatk --java-options "-Xmx~{command_mem_gb}G" \
+        AnalyzeCovariates \
+        -before ~{sampleName}.before.table \
+        -after ~{sampleName}.after.table \
+        -plots ~{sampleName}.AnalyzeCovariates_plots.pdf \
+        --use-jdk-deflater \
+        --use-jdk-inflater
+    >>>
+    output {
+        File plots = "~{sampleName}.AnalyzeCovariates_plots.pdf"
+    }
+    runtime {
+        docker: docker_image
+        memory: select_first([machine_mem_gb, 8]) + " GB"
+        disks: "local-disk " + select_first([disk_space_gb, 25]) + if use_ssd then " SSD" else " HDD"
         preemptible: select_first([preemptible_tries, 5])
     }
 }
