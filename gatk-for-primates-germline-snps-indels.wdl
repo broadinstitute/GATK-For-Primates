@@ -49,6 +49,7 @@ import "./tasks/ProduceFinalCallset.wdl" as ProduceFinalCallset
 import "./tasks/VariantCallAndGenotype.wdl" as VariantCallAndGenotype
 import "./tasks/VariantRecalibrator.wdl" as VQSR
 import "./tasks/GenerateTSVs.wdl" as GenerateTSVs
+import "./tasks/FinalizeInputs.wdl" as FinalizeInputs
 
 ## WORKFLOW DEFINITION
 workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
@@ -138,6 +139,7 @@ workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
                 R1 = sample.R1,
                 R2 = sample.R2,
                 execute_bwa = execute_bwa,
+                preemptible_tries = preemptible_tries,
                 docker_image = docker_image_bwa_and_samtools,
             }
 
@@ -147,6 +149,7 @@ workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
                 sampleName = sample.name,
                 input_bam = FastqToBwaMem.output_bam,
                 flowcell_patterned = flowcell_patterned,
+                preemptible_tries = preemptible_tries,
                 docker_image = docker_image_gatk,
             }
 
@@ -159,6 +162,7 @@ workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
                 sampleName = sample.name,
                 sampleGroup = sample.group,                
                 input_bam = MarkDuplicatesSpark.output_bam,
+                preemptible_tries = preemptible_tries,
                 docker_image = docker_image_gatk,
             }
 
@@ -171,6 +175,7 @@ workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
             bam_groups = SortAndFixTags.output_group,
             bam_names = SortAndFixTags.output_name,
             bam_indexes = SortAndFixTags.output_bam_index,
+            preemptible_tries = preemptible_tries,
         }
 
         Array[Array[String]] tsv_of_new_bams = read_tsv(GenerateTSVOfNewBAMs.tsv)
@@ -221,7 +226,7 @@ workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
     ## Work out which map of BAM files to use; either new or existing
     ## This has to be passed to a task because Cromwell cannot accommodate
     ## using files that may not exist in ternary operators (i.e. if-then-else)
-    call FinalizeInputs {
+    call FinalizeInputs.FinalizeInputs as FinalizeInputs {
     input:
         tsv_of_new_bams = tsv_of_new_bams,
         tsv_of_existing_bams = tsv_of_existing_bams,
@@ -252,6 +257,7 @@ workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
                 scatterName = sc.name,
                 scatterIntervals = sub(sc.intervals, " ", " -L "),
                 docker_image = docker_image_gatk,
+                preemptible_tries = preemptible_tries,
             }
 
         }
@@ -281,8 +287,9 @@ workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
                 input_genomicsdb = GenomicsDBImport.output_genomicsdb,
                 database_name = "initial_variant_calls_" + pair.left + "_" + sc.name,
                 scatterIntervals = sc.intervals,
-                docker_image = docker_image_gatk,
                 groupName = pair.left,
+                docker_image = docker_image_gatk,
+                preemptible_tries = preemptible_tries,
             }
 
             ## This only really needs to be done if it's the final run
@@ -300,6 +307,7 @@ workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
                 scatterName = sc.name,
                 scatterIntervals = sc.intervals,
                 docker_image = docker_image_gatk,
+                preemptible_tries = preemptible_tries,
             }
 
             call HardFilter.INDELs as HardFilterINDELs {
@@ -313,6 +321,7 @@ workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
                 scatterName = sc.name,
                 scatterIntervals = sc.intervals,
                 docker_image = docker_image_gatk,
+                preemptible_tries = preemptible_tries,
             }
 
         } ## Stop scattering over group/sample
@@ -335,6 +344,8 @@ workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
                 docker_image = docker_image_gatk,
                 groupName = pair.left,
                 type = "SNP",
+                docker_image = docker_image_gatk,
+                preemptible_tries = preemptible_tries,
             }
         }
 
@@ -347,6 +358,8 @@ workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
                 ref_dict = ref_dict,
                 docker_image = docker_image_gatk,
                 type = "INDEL",
+                docker_image = docker_image_gatk,
+                preemptible_tries = preemptible_tries,
             }
         }
 
@@ -367,6 +380,7 @@ workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
                     input_INDEL_sites_indexes = GatherINDELs.output_filtered_sites_only_index,
                     sampleName = col[0],
                     docker_image = docker_image_gatk,
+                    preemptible_tries = preemptible_tries,
             }
         }
 
@@ -391,6 +405,7 @@ workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
                 ref_dict = ref_dict,
                 ref_idxs = ref_idxs,
                 docker_image = docker_image_gatk,
+                preemptible_tries = preemptible_tries,
             }
 
         }
@@ -405,6 +420,7 @@ workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
             input_sites_indexes = GatherUnfilteredSNPs.output_unfiltered_sites_only_index,
             type = "SNP",
             docker_image = docker_image_gatk,
+            preemptible_tries = preemptible_tries,
         }
 
     } 
@@ -422,7 +438,7 @@ workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
                 ref_dict = ref_dict,
                 ref_idxs = ref_idxs,
                 docker_image = docker_image_gatk,
-
+                preemptible_tries = preemptible_tries,
             }
         } 
 
@@ -436,6 +452,7 @@ workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
             input_sites_indexes = GatherUnfilteredINDELs.output_unfiltered_sites_only_index,
             type = "INDEL",
             docker_image = docker_image_gatk,
+            preemptible_tries = preemptible_tries,
         }
 
     }
@@ -476,6 +493,7 @@ workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
             FinalCallset = ProduceFinalCallset.FinalCallset,
             FinalCallset_index = ProduceFinalCallset.FinalCallset_index,
             docker_image = docker_image_gatk,
+            preemptible_tries = preemptible_tries,
         }
 
     }
@@ -488,6 +506,7 @@ workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
         FinalCallset = ProduceFinalCallset.FinalCallset,
         FinalCallset_index = ProduceFinalCallset.FinalCallset_index,
         docker_image = docker_image_gatk,
+        preemptible_tries = preemptible_tries,
     }
 
     call VariantCallAndGenotype.GenotypeGenomicsDB as GenotypeGenomicsDBFinal {
@@ -500,6 +519,7 @@ workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
         FinalCallset = ProduceFinalCallset.FinalCallset,
         FinalCallset_index = ProduceFinalCallset.FinalCallset_index,        
         docker_image = docker_image_gatk,
+        preemptible_tries = preemptible_tries,
     }
 
 }
