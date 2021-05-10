@@ -72,3 +72,35 @@ task BaseRecalibrator {
         preemptible: select_first([preemptible_tries, 5])
     }
 }
+
+task AnalyzeCovariates {
+    input {
+        String sampleName
+        File table_before
+        File table_after
+        Int? machine_mem_gb
+        Int? disk_space_gb
+        Int? preemptible_tries
+        Boolean use_ssd = false
+    }
+    command <<<
+        set -euo pipefail
+
+        gatk \
+        AnalyzeCovariates \
+        -before ~{sampleName}.before.table \
+        -after ~{sampleName}.after.table \
+        -plots ~{sampleName}.AnalyzeCovariates_plots.pdf \
+        --use-jdk-deflater \
+        --use-jdk-inflater
+    >>>
+    output {
+        File plots = "~{sampleName}.AnalyzeCovariates_plots.pdf"
+    }
+    runtime {
+        docker: docker_image
+        memory: select_first([machine_mem_gb, 8]) + " GB"
+        disks: "local-disk " + select_first([disk_space_gb, 25]) + if use_ssd then " SSD" else " HDD"
+        preemptible: select_first([preemptible_tries, 5])
+    }
+}
