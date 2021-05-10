@@ -78,6 +78,7 @@ task AnalyzeCovariates {
         String sampleName
         File table_before
         File table_after
+        String docker_image
         Int? machine_mem_gb
         Int? disk_space_gb
         Int? preemptible_tries
