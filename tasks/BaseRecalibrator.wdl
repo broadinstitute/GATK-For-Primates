@@ -20,7 +20,7 @@ task BaseRecalibrator {
     }
     Float size_input_files = size(input_bam, "GB") + size(input_bam_index, "GB") + size(ref, "GB") + size(ref_dict, "GB") + size(ref_idxs, "GB")
     Int disk_size = ceil(size_input_files * 2.5) + 20
-    Int command_mem_gb = machine_mem_gb - 1
+    Int command_mem_gb = select_first([machine_mem_gb, 8]) - 1
     command <<<
         set -euo pipefail
         
@@ -85,7 +85,7 @@ task AnalyzeCovariates {
         Int? preemptible_tries
         Boolean use_ssd = false
     }
-    Int command_mem_gb = machine_mem_gb - 1
+    Int command_mem_gb = select_first([machine_mem_gb, 8]) - 1
     command <<<
         set -euo pipefail
 
