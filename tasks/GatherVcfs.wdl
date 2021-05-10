@@ -1,7 +1,5 @@
 version development
 
-
-
 task HardFilteredVcfs {
     input {
         Array[File] input_filtered
@@ -9,7 +7,13 @@ task HardFilteredVcfs {
         String groupName
         String type
         String docker_image
+        Int? machine_mem_gb
+        Int? disk_space_gb
+        Int? preemptible_tries
+        Boolean use_ssd = false
     }
+    Float size_input_files = size(input_filtered, "GB") + size(ref_dict, "GB")
+    Int disk_size = ceil(size_input_files * 2.2) + 20
     command {
     
         ## You might not need this is GatherVcfs doesn't require indexes
@@ -38,9 +42,13 @@ task HardFilteredVcfs {
         File output_filtered_sites_only = "~{groupName}_~{type}_filtered_sites_only.vcf.gz"
         File output_filtered_sites_only_index = "~{groupName}_~{type}_filtered_sites_only.vcf.gz.tbi"
     }
+    runtime {
+        docker: docker_image
+        memory: select_first([machine_mem_gb, 8]) + " GB"
+        disks: "local-disk " + select_first([disk_space_gb, disk_size]) + if use_ssd then " SSD" else " HDD"
+        preemptible: select_first([preemptible_tries, 5])
+    }
 }
-
-
 
 task UnfilteredVcfs {
     input {
@@ -51,7 +59,13 @@ task UnfilteredVcfs {
         String groupName
         String type
         String docker_image
+        Int? machine_mem_gb
+        Int? disk_space_gb
+        Int? preemptible_tries
+        Boolean use_ssd = false
     }
+    Float size_input_files = size(input_unfiltered, "GB") + size(ref_dict, "GB")
+    Int disk_size = ceil(size_input_files * 2.2) + 20
     String type_corrected = if type == "INDEL" then "MIXED" else "SNP"
     command {
     
@@ -83,5 +97,11 @@ task UnfilteredVcfs {
     output {
         File output_unfiltered_sites_only = "~{groupName}_~{type}_unfiltered_sites_only.vcf.gz"
         File output_unfiltered_sites_only_index = "~{groupName}_~{type}_unfiltered_sites_only.vcf.gz.tbi"
+    }
+    runtime {
+        docker: docker_image
+        memory: select_first([machine_mem_gb, 8]) + " GB"
+        disks: "local-disk " + select_first([disk_space_gb, disk_size]) + if use_ssd then " SSD" else " HDD"
+        preemptible: select_first([preemptible_tries, 5])
     }
 }

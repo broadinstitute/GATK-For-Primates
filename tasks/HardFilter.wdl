@@ -12,7 +12,13 @@ task SNPs {
         String scatterName
         String scatterIntervals
         String docker_image
+        Int? machine_mem_gb
+        Int? disk_space_gb
+        Int? preemptible_tries
+        Boolean use_ssd = false
     }
+    Float size_input_files = size(ref, "GB") + size(ref_dict, "GB") + size(input_genotypes, "GB") + size(input_genotypes_index, "GB")
+    Int disk_size = ceil(size_input_files * 2.5) + 20
     command {
 
         gatk \
@@ -49,6 +55,12 @@ task SNPs {
         File output_filtered_SNPs_index = "~{groupName}_~{scatterName}_SNPs_filtered.vcf.gz.tbi"
         String output_groupName = "~{groupName}"
     }
+    runtime {
+        docker: docker_image
+        memory: select_first([machine_mem_gb, 8]) + " GB"
+        disks: "local-disk " + select_first([disk_space_gb, disk_size]) + if use_ssd then " SSD" else " HDD"
+        preemptible: select_first([preemptible_tries, 5])
+    }
 }
 
 ## Need to add AS annotation flags here
@@ -63,7 +75,13 @@ task INDELs {
         String scatterName
         String scatterIntervals
         String docker_image
+        Int? machine_mem_gb
+        Int? disk_space_gb
+        Int? preemptible_tries
+        Boolean use_ssd = false
     }
+    Float size_input_files = size(ref, "GB") + size(ref_dict, "GB") + size(input_genotypes, "GB") + size(input_genotypes_index, "GB")
+    Int disk_size = ceil(size_input_files * 2.5) + 20
     command {
 
         gatk \
@@ -96,5 +114,11 @@ task INDELs {
         File output_filtered_INDELs = "~{groupName}_~{scatterName}_INDELs_filtered.vcf.gz"
         File output_filtered_INDELs_index = "~{groupName}_~{scatterName}_INDELs_filtered.vcf.gz.tbi"
         String output_groupName = "~{groupName}"
+    }
+    runtime {
+        docker: docker_image
+        memory: select_first([machine_mem_gb, 8]) + " GB"
+        disks: "local-disk " + select_first([disk_space_gb, disk_size]) + if use_ssd then " SSD" else " HDD"
+        preemptible: select_first([preemptible_tries, 5])
     }
 }

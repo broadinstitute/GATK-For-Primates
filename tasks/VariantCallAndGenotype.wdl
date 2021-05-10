@@ -5,7 +5,6 @@ task HaplotypeCaller {
         File ref
         File ref_dict
         Array[File]+ ref_idxs
-        String docker_image
         File? input_bam
         File? input_bam_index
         String gvcf_basename
@@ -15,9 +14,15 @@ task HaplotypeCaller {
         String? scatterIntervals
         File? FinalCallset
         File? FinalCallset_index
+        String docker_image
+        Int? machine_mem_gb
+        Int? disk_space_gb
+        Int? preemptible_tries
+        Boolean use_ssd = false
     }
+    Float size_input_files = size(ref, "GB") + size(ref_dict, "GB") + size(input_bam, "GB") + size(input_bam_index, "GB") + size(FinalCallset, "GB") + size(FinalCallset_index, "GB")
+    Int disk_size = ceil(size_input_files * 1.5) + 20
     String padding = if defined(FinalCallset) then "--interval-padding 100 \\" else " "
-
     command {
         gatk \
         HaplotypeCaller \
@@ -39,9 +44,12 @@ task HaplotypeCaller {
         String output_gvcf_scattername = "~{scatterName}"
         String output_gvcf_group = "~{sampleGroup}"
     }
-    #runtime {
-        #docker: docker_image
-    #}
+    runtime {
+        docker: docker_image
+        memory: select_first([machine_mem_gb, 8]) + " GB"
+        disks: "local-disk " + select_first([disk_space_gb, disk_size]) + if use_ssd then " SSD" else " HDD"
+        preemptible: select_first([preemptible_tries, 5])
+    }
 }
 
 task GenomicsDBImport {
@@ -49,9 +57,15 @@ task GenomicsDBImport {
         Array[File] input_gvcfs
         String database_name
         String scatterIntervals
-        String docker_image
         Int? merge_contigs_into_num_partitions
+        String docker_image
+        Int? machine_mem_gb
+        Int? disk_space_gb
+        Int? preemptible_tries
+        Boolean use_ssd = false
     }
+    Float size_input_files = size(input_gvcfs, "GB")
+    Int disk_size = ceil(size_input_files * 2.5) + 20
     #Int merge_contigs_value = if defined(merge_contigs_into_num_partitions) then merge_contigs_into_num_partitions else "0"
     command <<<
     set -euo pipefail
@@ -69,9 +83,12 @@ task GenomicsDBImport {
     output {
         File output_genomicsdb = "~{database_name}.tar"
     }
-    #runtime {
-    #    docker: docker_image
-    #}
+    runtime {
+        docker: docker_image
+        memory: select_first([machine_mem_gb, 8]) + " GB"
+        disks: "local-disk " + select_first([disk_space_gb, disk_size]) + if use_ssd then " SSD" else " HDD"
+        preemptible: select_first([preemptible_tries, 5])
+    }
 }
 
 task GenomicsDBImportFinal {
@@ -82,7 +99,13 @@ task GenomicsDBImportFinal {
         File FinalCallset
         File FinalCallset_index
         String docker_image
+        Int? machine_mem_gb
+        Int? disk_space_gb
+        Int? preemptible_tries
+        Boolean use_ssd = false
     }
+    Float size_input_files = size(input_gvcfs, "GB")
+    Int disk_size = ceil(size_input_files * 2.5) + 20
     command <<<
     set -euo pipefail
 
@@ -98,9 +121,12 @@ task GenomicsDBImportFinal {
     output {
         File output_genomicsdb = "~{database_name}.tar"
     }
-    #runtime {
-    #    docker: docker_image
-    #}
+    runtime {
+        docker: docker_image
+        memory: select_first([machine_mem_gb, 8]) + " GB"
+        disks: "local-disk " + select_first([disk_space_gb, disk_size]) + if use_ssd then " SSD" else " HDD"
+        preemptible: select_first([preemptible_tries, 5])
+    }
 }
 
 
@@ -114,9 +140,15 @@ task GenotypeGenomicsDB {
         File? FinalCallset
         File? FinalCallset_index
         String? scatterIntervals
-        String docker_image
         String? groupName
+        String docker_image
+        Int? machine_mem_gb
+        Int? disk_space_gb
+        Int? preemptible_tries
+        Boolean use_ssd = false
     }
+    Float size_input_files = size(ref, "GB") + size(ref_dict, "GB") + size(ref_idxs, "GB") + size(input_genomicsdb, "GB") + size(FinalCallset, "GB") + size(FinalCallset_index, "GB")
+    Int disk_size = ceil(size_input_files * 2.5) + 20
     String final_options = if defined(FinalCallset) then "--include-non-variant-sites\\" else " "
     command <<<
     set -euo pipefail
@@ -137,5 +169,11 @@ task GenotypeGenomicsDB {
         String output_groupName = "~{groupName}"
         File output_genotypes = "~{database_name}.vcf.gz"
         File output_genotypes_index = "~{database_name}.vcf.gz.tbi"
+    }
+    runtime {
+        docker: docker_image
+        memory: select_first([machine_mem_gb, 8]) + " GB"
+        disks: "local-disk " + select_first([disk_space_gb, disk_size]) + if use_ssd then " SSD" else " HDD"
+        preemptible: select_first([preemptible_tries, 5])
     }
 }

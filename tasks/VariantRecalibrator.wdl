@@ -10,7 +10,13 @@ task VariantRecalibrator {
         Array[File] input_sites_indexes
         String type
         String docker_image
+        Int? machine_mem_gb
+        Int? disk_space_gb
+        Int? preemptible_tries
+        Boolean use_ssd = false
     }
+    Float size_input_files = size(ref, "GB") + size(ref_dict, "GB") + size(ref_idxs, "GB") + size(truth_set, "GB") + size(input_sites, "GB") + size(input_sites_indexes, "GB")
+    Int disk_size = ceil(size_input_files * 2) + 20
     command <<<
         set -euo pipefail
 
@@ -84,5 +90,11 @@ task VariantRecalibrator {
     output {
         File output_recalibrated_sites_only = "Cohort_~{type}.recalibrated_sites_only.vcf.gz"
         File output_recalibrated_sites_only_index = "Cohort_~{type}.recalibrated_sites_only.vcf.gz.tbi"
+    }
+    runtime {
+        docker: docker_image
+        memory: select_first([machine_mem_gb, 8]) + " GB"
+        disks: "local-disk " + select_first([disk_space_gb, disk_size]) + if use_ssd then " SSD" else " HDD"
+        preemptible: select_first([preemptible_tries, 5])
     }
 }
