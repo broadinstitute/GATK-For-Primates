@@ -85,10 +85,11 @@ task AnalyzeCovariates {
         Int? preemptible_tries
         Boolean use_ssd = false
     }
+    Int command_mem_gb = select_first([machine_mem_gb, 8]) - 1
     command <<<
         set -euo pipefail
 
-        gatk \
+        gatk --java-options "-Xmx~{command_mem_gb}G" \
         AnalyzeCovariates \
         -before ~{sampleName}.before.table \
         -after ~{sampleName}.after.table \

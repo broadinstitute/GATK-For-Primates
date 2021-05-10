@@ -48,9 +48,10 @@ task MarkDuplicatesSpark {
     Float size_input_files = size(input_bam, "GB")
     Int disk_size = ceil(size_input_files * 2.5) + 20
     String pixel_distance = if flowcell_patterned then "2500" else "100"
-        command {
+    Int command_mem_gb = select_first([machine_mem_gb, 24]) - 6
+    command {
         gatk \
-        MarkDuplicatesSpark \
+        MarkDuplicatesSpark --java-options "-Xmx~{command_mem_gb}G" \
         -I ~{input_bam} \
         --optical-duplicate-pixel-distance ~{pixel_distance} \
         -O ~{sampleName}.dedup.bam \
@@ -62,7 +63,7 @@ task MarkDuplicatesSpark {
     }
     runtime {
         docker: docker_image
-        memory: select_first([machine_mem_gb, 16]) + " GB"
+        memory: select_first([machine_mem_gb, 24]) + " GB"
         disks: "local-disk " + select_first([disk_space_gb, disk_size]) + if use_ssd then " SSD" else " HDD"
         preemptible: select_first([preemptible_tries, 5])
      }
@@ -84,9 +85,10 @@ task SortAndFixTags {
     }
     Float size_input_files = size(input_bam, "GB") + size(ref, "GB") + size(ref_dict, "GB") + size(ref_idxs, "GB")
     Int disk_size = ceil(size_input_files * 2) + 20
+    Int command_mem_gb = select_first([machine_mem_gb, 8]) - 1
     command {
         gatk \
-        SetNmMdAndUqTags \
+        SetNmMdAndUqTags --java-options "-Xmx~{command_mem_gb}G" \
         -I ~{input_bam} \
         -R ~{ref} \
         -O ~{sampleName}.dedup.tagged.bam \

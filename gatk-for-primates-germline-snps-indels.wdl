@@ -486,8 +486,9 @@ workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
         SNPs_recalibrated_index = RecalibrateSNPs.output_recalibrated_sites_only_index,
         INDELs_recalibrated = RecalibrateINDELs.output_recalibrated_sites_only,
         INDELs_recalibrated_index = RecalibrateINDELs.output_recalibrated_sites_only_index,
+        docker_image = docker_image_gatk,
+        preemptible_tries = preemptible_tries,
     }
-
 
     scatter (col in FinalizeInputs.finalized_inputs) {
 
