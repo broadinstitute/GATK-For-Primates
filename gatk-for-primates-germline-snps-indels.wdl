@@ -74,6 +74,7 @@ workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
         String docker_image_gatk = "broadinstitute/gatk:4.2.0.0"
         String docker_image_bwa_and_samtools = "broadinstitute/genomes-in-the-cloud"
         String docker_image_python = "python:latest"
+        String docker_image_gatk_with_R_and_ggplot = "broadinstitute/genomes-in-the-cloud"
 
         #Optional runtime arguments
         Int? preemptible_tries
@@ -380,6 +381,17 @@ workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
                     input_INDEL_sites_indexes = GatherINDELs.output_filtered_sites_only_index,
                     sampleName = col[0],
                     docker_image = docker_image_gatk,
+                    preemptible_tries = preemptible_tries,
+            }
+            
+            ## Make plots for each BAM file -- requires separate task as R and ggplot needed
+            ## and the genomesinthecloud docker uses an old version of GATK
+            call BQSR.AnalyzeCovariates as AnalyzeCovariates {
+            input:
+                    sampleName = col[0],
+                    table_before = BaseRecalibrator.table_before,
+                    table_after = BaseRecalibrator.table_after,
+                    docker_image = docker_image_gatk_with_R_and_ggplot,
                     preemptible_tries = preemptible_tries,
             }
         }
