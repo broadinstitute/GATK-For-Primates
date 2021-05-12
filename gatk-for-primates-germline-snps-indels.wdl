@@ -39,17 +39,17 @@ version development
 ## authorized to run all programs before running this script. Please see the dockers
 ## for detailed licensing information pertaining to the included programs.
 
-import "./structs/structs.wdl"
-import "./tasks/CollectInfo.wdl" as CollectInfo
-import "./tasks/FASTQtoBAM.wdl" as FASTQtoBAM
-import "./tasks/BaseRecalibrator.wdl" as BQSR
-import "./tasks/GatherVcfs.wdl" as Gather
-import "./tasks/HardFilter.wdl" as HardFilter
-import "./tasks/ProduceFinalCallset.wdl" as ProduceFinalCallset
-import "./tasks/VariantCallAndGenotype.wdl" as VariantCallAndGenotype
-import "./tasks/VariantRecalibrator.wdl" as VQSR
-import "./tasks/GenerateTSVs.wdl" as GenerateTSVs
-import "./tasks/FinalizeInputs.wdl" as FinalizeInputs
+import "https://raw.githubusercontent.com/broadinstitute/GATK-For-Primates/main/structs/structs.wdl"
+import "https://raw.githubusercontent.com/broadinstitute/GATK-For-Primates/main/tasks/CollectInfo.wdl" as CollectInfo
+import "https://raw.githubusercontent.com/broadinstitute/GATK-For-Primates/main/tasks/FASTQtoBAM.wdl" as FASTQtoBAM
+import "https://raw.githubusercontent.com/broadinstitute/GATK-For-Primates/main/tasks/BaseRecalibrator.wdl" as BQSR
+import "https://raw.githubusercontent.com/broadinstitute/GATK-For-Primates/main./tasks/GatherVcfs.wdl" as Gather
+import "https://raw.githubusercontent.com/broadinstitute/GATK-For-Primates/main/tasks/HardFilter.wdl" as HardFilter
+import "https://raw.githubusercontent.com/broadinstitute/GATK-For-Primates/main/tasks/ProduceFinalCallset.wdl" as ProduceFinalCallset
+import "https://raw.githubusercontent.com/broadinstitute/GATK-For-Primates/main/tasks/VariantCallAndGenotype.wdl" as VariantCallAndGenotype
+import "https://raw.githubusercontent.com/broadinstitute/GATK-For-Primates/main/tasks/VariantRecalibrator.wdl" as VQSR
+import "https://raw.githubusercontent.com/broadinstitute/GATK-For-Primates/main/tasks/GenerateTSVs.wdl" as GenerateTSVs
+import "https://raw.githubusercontent.com/broadinstitute/GATK-For-Primates/main/tasks/FinalizeInputs.wdl" as FinalizeInputs
 
 ## WORKFLOW DEFINITION
 workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
