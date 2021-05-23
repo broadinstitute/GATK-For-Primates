@@ -34,13 +34,11 @@ task BAMs {
       for i in range(len(bams)):
         fi.write(bam_names[i] + "\t" + bam_groups[i] + "\t" + bams[i] + "\t" + bam_indexes[i] + "\n")
     CODE
-
-    tsv_of_bams = read_tsv(bams_generated_tsv.txt)
     >>>
 
     output {
         File tsv = "bams_generated_tsv.txt"
-        Array[Array[String]] tsv_of_bams = tsv_of_bams
+        Array[Array[String]] tsv_of_bams = read_tsv("bams_generated_tsv.txt")
     }
     runtime {
         docker: docker_image
