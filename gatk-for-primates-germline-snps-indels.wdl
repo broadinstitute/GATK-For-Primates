@@ -232,6 +232,7 @@ workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
     input:
         tsv_of_new_bams = tsv_of_new_bams,
         tsv_of_existing_bams = tsv_of_existing_bams,
+        preemptible_tries = preemptible_tries,
     }
     
     ####################################################################
