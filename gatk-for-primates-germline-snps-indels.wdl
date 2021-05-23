@@ -213,6 +213,7 @@ workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
             bam_groups = existingGroups,
             bams = existingBAMs,
             bam_indexes = existingBAIs,
+            preemptible_tries = preemptible_tries,
         }
 
         ## Read the new TSV into a map
