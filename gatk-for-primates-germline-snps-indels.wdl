@@ -72,9 +72,9 @@ workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
         
         ## Docker containers
         String docker_image_gatk = "broadinstitute/gatk:4.2.0.0"
-        String docker_image_bwa_and_samtools = "broadinstitute/genomes-in-the-cloud:2.3.1-1512499786"
+        String docker_image_bwa_and_samtools = "us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.4.7-1603303710"
         String docker_image_python = "python:latest"
-        String docker_image_gatk_with_R_and_ggplot = "broadinstitute/genomes-in-the-cloud:2.3.1-1512499786"
+        String docker_image_gatk_with_R_and_ggplot = "us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.4.7-1603303710"
 
         ## Optional runtime arguments
         Int? preemptible_tries
@@ -85,7 +85,7 @@ workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
     ## Set either bwa or bwamem2 index files and execution command; note bwa-mem2 requires change in docker file
     File ref_dict = sub(ref, ".fa", ".dict")
     Array[File] ref_idxs = if bwamem2 then prefix(ref + ".", ["fai", "amb", "ann", "pac", "0123","bwt.2bit.64"]) else prefix(ref + ".", ["fai", "amb", "ann", "pac", "bwt", "sa"])
-    String execute_bwa = if bwamem2 then "bwa-mem2" else "bwa"
+    String execute_bwa = if bwamem2 then "bwa-mem2" else "/usr/gitc/bwa"
 
     ## Set configuration Booleans as true or false
     Boolean input_is_fastq = mode == "initial"
