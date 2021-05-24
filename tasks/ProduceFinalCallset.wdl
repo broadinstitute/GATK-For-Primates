@@ -26,7 +26,7 @@ task ProduceFinalCallset {
     String d = if defined(INDELs_recalibrated) then " -I " else ""
     Float size_input_files = size(SNPs_hard_filtered, "GB") + size(SNPs_hard_filtered_index, "GB") + size(INDELs_hard_filtered, "GB") + size(INDELs_hard_filtered_index, "GB") + size(SNPs_recalibrated, "GB") + size(SNPs_recalibrated_index, "GB") + size(INDELs_recalibrated, "GB") + size(INDELs_recalibrated_index, "GB") + size(ref_dict, "GB")
     Int runtime_calculated_disk = ceil(size_input_files * 2) + 20
-    Int command_mem_gb = runtime_set_memory - 1
+    Int command_mem_gb = select_first([runtime_set_memory, 8]) - 1
     command <<<
         set -euo pipefail
 
