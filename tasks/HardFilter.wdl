@@ -11,15 +11,18 @@ task SNPs {
         String groupName
         String scatterName
         String scatterIntervals
-        String docker_image
-        Int? machine_mem_gb
-        Int? disk_space_gb
-        Int? preemptible_tries
+        # runtime
+        String container
+        Int? runtime_set_preemptible_tries
+        Int? runtime_set_cpu
+        Int? runtime_set_memory
+        Int? runtime_set_disk
+        Int? runtime_set_max_retries
         Boolean use_ssd = false
     }
     Float size_input_files = size(ref, "GB") + size(ref_dict, "GB") + size(input_genotypes, "GB") + size(input_genotypes_index, "GB")
-    Int disk_size = ceil(size_input_files * 2.5) + 20
-    Int command_mem_gb = select_first([machine_mem_gb, 8]) - 1
+    Int runtime_calculated_disk = ceil(size_input_files * 2.5) + 20
+    Int command_mem_gb = select_first([runtime_set_memory, 8]) - 1
     command {
 
         gatk \
@@ -57,11 +60,15 @@ task SNPs {
         String output_groupName = "~{groupName}"
     }
     runtime {
-        docker: docker_image
-        memory: select_first([machine_mem_gb, 8]) + " GB"
-        disks: "local-disk " + select_first([disk_space_gb, disk_size]) + if use_ssd then " SSD" else " HDD"
-        preemptible: select_first([preemptible_tries, 5])
-    }
+        container: container
+        cpu: select_first([runtime_set_cpu, 1])
+        gpu: false
+        memory: select_first([runtime_set_memory, 8]) + " GB"
+        disks: "local-disk " + select_first([runtime_set_disk, runtime_calculated_disk]) + if use_ssd then " SSD" else " HDD"
+        maxRetries: select_first([runtime_set_max_retries, 0])
+        preemptible: select_first([runtime_set_preemptible_tries, 5])
+        returnCodes: 0
+     }
 }
 
 ## Need to add AS annotation flags here
@@ -75,15 +82,18 @@ task INDELs {
         String groupName
         String scatterName
         String scatterIntervals
-        String docker_image
-        Int? machine_mem_gb
-        Int? disk_space_gb
-        Int? preemptible_tries
+        # runtime
+        String container
+        Int? runtime_set_preemptible_tries
+        Int? runtime_set_cpu
+        Int? runtime_set_memory
+        Int? runtime_set_disk
+        Int? runtime_set_max_retries
         Boolean use_ssd = false
     }
     Float size_input_files = size(ref, "GB") + size(ref_dict, "GB") + size(input_genotypes, "GB") + size(input_genotypes_index, "GB")
-    Int disk_size = ceil(size_input_files * 2.5) + 20
-    Int command_mem_gb = select_first([machine_mem_gb, 8]) - 1
+    Int runtime_calculated_disk = ceil(size_input_files * 2.5) + 20
+    Int command_mem_gb = select_first([runtime_set_memory, 8]) - 1
     command {
 
         gatk \
@@ -118,9 +128,13 @@ task INDELs {
         String output_groupName = "~{groupName}"
     }
     runtime {
-        docker: docker_image
-        memory: select_first([machine_mem_gb, 8]) + " GB"
-        disks: "local-disk " + select_first([disk_space_gb, disk_size]) + if use_ssd then " SSD" else " HDD"
-        preemptible: select_first([preemptible_tries, 5])
-    }
+        container: container
+        cpu: select_first([runtime_set_cpu, 1])
+        gpu: false
+        memory: select_first([runtime_set_memory, 8]) + " GB"
+        disks: "local-disk " + select_first([runtime_set_disk, runtime_calculated_disk]) + if use_ssd then " SSD" else " HDD"
+        maxRetries: select_first([runtime_set_max_retries, 0])
+        preemptible: select_first([runtime_set_preemptible_tries, 5])
+        returnCodes: 0
+     }
 }
