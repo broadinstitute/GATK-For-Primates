@@ -1,6 +1,7 @@
 {
   "GATKForPrimatesGermlineSNPsIndels_GATK4.mode": "initial",
   "GATKForPrimatesGermlineSNPsIndels_GATK4.ref": "input/rhiRox_chr21_and_chr22_only.fa",
+  "GATKForPrimatesGermlineSNPsIndels_GATK4.flowcell_patterned": "true",
   "GATKForPrimatesGermlineSNPsIndels_GATK4.merge_contigs_into_num_partitions": "0",
   "GATKForPrimatesGermlineSNPsIndels_GATK4.sampleList": [{
       "name": "R.bie-2011A089",
