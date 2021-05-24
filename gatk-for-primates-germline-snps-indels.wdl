@@ -43,7 +43,7 @@ import "https://raw.githubusercontent.com/broadinstitute/GATK-For-Primates/main/
 import "https://raw.githubusercontent.com/broadinstitute/GATK-For-Primates/main/tasks/CollectInfo.wdl" as CollectInfo
 import "https://raw.githubusercontent.com/broadinstitute/GATK-For-Primates/main/tasks/FASTQtoBAM.wdl" as FASTQtoBAM
 import "https://raw.githubusercontent.com/broadinstitute/GATK-For-Primates/main/tasks/BaseRecalibrator.wdl" as BQSR
-import "https://raw.githubusercontent.com/broadinstitute/GATK-For-Primates/main./tasks/GatherVcfs.wdl" as Gather
+import "https://raw.githubusercontent.com/broadinstitute/GATK-For-Primates/main/tasks/GatherVcfs.wdl" as Gather
 import "https://raw.githubusercontent.com/broadinstitute/GATK-For-Primates/main/tasks/HardFilter.wdl" as HardFilter
 import "https://raw.githubusercontent.com/broadinstitute/GATK-For-Primates/main/tasks/ProduceFinalCallset.wdl" as ProduceFinalCallset
 import "https://raw.githubusercontent.com/broadinstitute/GATK-For-Primates/main/tasks/VariantCallAndGenotype.wdl" as VariantCallAndGenotype
