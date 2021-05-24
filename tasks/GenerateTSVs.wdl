@@ -10,13 +10,15 @@ task BAMs {
         Array[String] bam_groups
         Array[String] bam_names
         Array[String] bam_indexes
-        String docker_image = "python:latest"
-        Int? machine_mem_gb
-        Int? disk_space_gb
-        Int? preemptible_tries
+        # runtime
+        String container
+        Int? runtime_set_preemptible_tries
+        Int? runtime_set_cpu
+        Int? runtime_set_memory
+        Int? runtime_set_disk
+        Int? runtime_set_max_retries
         Boolean use_ssd = false
     }
-    Int disk_size = 25
     command <<<
     set -oe pipefail
     
@@ -41,9 +43,13 @@ task BAMs {
         Array[Array[String]] tsv_of_bams = read_tsv("bams_generated_tsv.txt")
     }
     runtime {
-        docker: docker_image
-        memory: select_first([machine_mem_gb, 8]) + " GB"
-        disks: "local-disk " + select_first([disk_space_gb, disk_size]) + if use_ssd then " SSD" else " HDD"
-        preemptible: select_first([preemptible_tries, 5])
-    }
+        container: container
+        cpu: select_first([runtime_set_cpu, 1])
+        gpu: false
+        memory: select_first([runtime_set_memory, 8]) + " GB"
+        disks: "local-disk " + select_first([runtime_set_disk, 25]) + if use_ssd then " SSD" else " HDD"
+        maxRetries: select_first([runtime_set_max_retries, 0])
+        preemptible: select_first([runtime_set_preemptible_tries, 5])
+        returnCodes: 0
+     }
 }
