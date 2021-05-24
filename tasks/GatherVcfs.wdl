@@ -6,14 +6,17 @@ task HardFilteredVcfs {
         File ref_dict
         String groupName
         String type
-        String docker_image
-        Int? machine_mem_gb
-        Int? disk_space_gb
-        Int? preemptible_tries
+        # runtime
+        String container
+        Int? runtime_set_preemptible_tries
+        Int? runtime_set_cpu
+        Int? runtime_set_memory
+        Int? runtime_set_disk
+        Int? runtime_set_max_retries
         Boolean use_ssd = false
     }
     Float size_input_files = size(input_filtered, "GB") + size(ref_dict, "GB")
-    Int disk_size = ceil(size_input_files * 2.2) + 20
+    Int runtime_calculated_disk = ceil(size_input_files * 2.2) + 20
     command {
     
         ## You might not need this is GatherVcfs doesn't require indexes
@@ -43,11 +46,15 @@ task HardFilteredVcfs {
         File output_filtered_sites_only_index = "~{groupName}_~{type}_filtered_sites_only.vcf.gz.tbi"
     }
     runtime {
-        docker: docker_image
-        memory: select_first([machine_mem_gb, 8]) + " GB"
-        disks: "local-disk " + select_first([disk_space_gb, disk_size]) + if use_ssd then " SSD" else " HDD"
-        preemptible: select_first([preemptible_tries, 5])
-    }
+        container: container
+        cpu: select_first([runtime_set_cpu, 1])
+        gpu: false
+        memory: select_first([runtime_set_memory, 8]) + " GB"
+        disks: "local-disk " + select_first([runtime_set_disk, runtime_calculated_disk]) + if use_ssd then " SSD" else " HDD"
+        maxRetries: select_first([runtime_set_max_retries, 0])
+        preemptible: select_first([runtime_set_preemptible_tries, 5])
+        returnCodes: 0
+     }
 }
 
 task UnfilteredVcfs {
@@ -58,14 +65,17 @@ task UnfilteredVcfs {
         Array[File]+ ref_idxs
         String groupName
         String type
-        String docker_image
-        Int? machine_mem_gb
-        Int? disk_space_gb
-        Int? preemptible_tries
+        # runtime
+        String container
+        Int? runtime_set_preemptible_tries
+        Int? runtime_set_cpu
+        Int? runtime_set_memory
+        Int? runtime_set_disk
+        Int? runtime_set_max_retries
         Boolean use_ssd = false
     }
     Float size_input_files = size(input_unfiltered, "GB") + size(ref_dict, "GB")
-    Int disk_size = ceil(size_input_files * 2.2) + 20
+    Int runtime_calculated_disk = ceil(size_input_files * 2.2) + 20
     String type_corrected = if type == "INDEL" then "MIXED" else "SNP"
     command {
     
@@ -99,9 +109,13 @@ task UnfilteredVcfs {
         File output_unfiltered_sites_only_index = "~{groupName}_~{type}_unfiltered_sites_only.vcf.gz.tbi"
     }
     runtime {
-        docker: docker_image
-        memory: select_first([machine_mem_gb, 8]) + " GB"
-        disks: "local-disk " + select_first([disk_space_gb, disk_size]) + if use_ssd then " SSD" else " HDD"
-        preemptible: select_first([preemptible_tries, 5])
-    }
+        container: container
+        cpu: select_first([runtime_set_cpu, 1])
+        gpu: false
+        memory: select_first([runtime_set_memory, 8]) + " GB"
+        disks: "local-disk " + select_first([runtime_set_disk, runtime_calculated_disk]) + if use_ssd then " SSD" else " HDD"
+        maxRetries: select_first([runtime_set_max_retries, 0])
+        preemptible: select_first([runtime_set_preemptible_tries, 5])
+        returnCodes: 0
+     }
 }
