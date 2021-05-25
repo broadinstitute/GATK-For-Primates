@@ -12,15 +12,18 @@ task BaseRecalibrator {
         Array[File] input_SNP_sites_indexes
         Array[File] input_INDEL_sites
         Array[File] input_INDEL_sites_indexes
-        String docker_image
-        Int? machine_mem_gb
-        Int? disk_space_gb
-        Int? preemptible_tries
+        # runtime
+        String container
+        Int? runtime_set_preemptible_tries
+        Int? runtime_set_cpu
+        Int? runtime_set_memory
+        Int? runtime_set_disk
+        Int? runtime_set_max_retries
         Boolean use_ssd = false
     }
     Float size_input_files = size(input_bam, "GB") + size(input_bam_index, "GB") + size(ref, "GB") + size(ref_dict, "GB") + size(ref_idxs, "GB")
-    Int disk_size = ceil(size_input_files * 2.5) + 20
-    Int command_mem_gb = select_first([machine_mem_gb, 8]) - 1
+    Int runtime_calculated_disk = ceil(size_input_files * 2.5) + 20
+    Int command_mem_gb = select_first([runtime_set_memory, 8]) - 1
     command <<<
         set -euo pipefail
         
@@ -67,11 +70,15 @@ task BaseRecalibrator {
         File recalibrated_bam_index = "~{sampleName}_recalibrated.bai"
     }
     runtime {
-        docker: docker_image
-        memory: select_first([machine_mem_gb, 8]) + " GB"
-        disks: "local-disk " + select_first([disk_space_gb, disk_size]) + if use_ssd then " SSD" else " HDD"
-        preemptible: select_first([preemptible_tries, 5])
-    }
+        container: container
+        cpu: select_first([runtime_set_cpu, 1])
+        gpu: false
+        memory: select_first([runtime_set_memory, 8]) + " GB"
+        disks: "local-disk " + select_first([runtime_set_disk, runtime_calculated_disk]) + if use_ssd then " SSD" else " HDD"
+        maxRetries: select_first([runtime_set_max_retries, 0])
+        preemptible: select_first([runtime_set_preemptible_tries, 5])
+        returnCodes: 0
+     }
 }
 
 task AnalyzeCovariates {
@@ -79,20 +86,30 @@ task AnalyzeCovariates {
         String sampleName
         File table_before
         File table_after
-        String docker_image
-        Int? machine_mem_gb
-        Int? disk_space_gb
-        Int? preemptible_tries
+        # runtime
+        String container
+        Int? runtime_set_preemptible_tries
+        Int? runtime_set_cpu
+        Int? runtime_set_memory
+        Int? runtime_set_disk
+        Int? runtime_set_max_retries
         Boolean use_ssd = false
     }
-    Int command_mem_gb = select_first([machine_mem_gb, 8]) - 1
+    Int command_mem_gb = select_first([runtime_set_memory, 8]) - 1
     command <<<
         set -euo pipefail
 
+        # The required R packages are not in Broad's production GITC image
+        R --vanilla << CODE
+        install.packages("gplots", repos="http://cran.us.r-project.org")
+        install.packages("gsalib", repos="http://cran.us.r-project.org")
+        install.packages("reshape", repos="http://cran.us.r-project.org")
+        CODE
+        
         gatk --java-options "-Xmx~{command_mem_gb}G" \
         AnalyzeCovariates \
-        -before ~{sampleName}.before.table \
-        -after ~{sampleName}.after.table \
+        -before ~{table_before} \
+        -after ~{table_after} \
         -plots ~{sampleName}.AnalyzeCovariates_plots.pdf \
         --use-jdk-deflater \
         --use-jdk-inflater
@@ -101,9 +118,13 @@ task AnalyzeCovariates {
         File plots = "~{sampleName}.AnalyzeCovariates_plots.pdf"
     }
     runtime {
-        docker: docker_image
-        memory: select_first([machine_mem_gb, 8]) + " GB"
-        disks: "local-disk " + select_first([disk_space_gb, 25]) + if use_ssd then " SSD" else " HDD"
-        preemptible: select_first([preemptible_tries, 5])
-    }
+        container: container
+        cpu: select_first([runtime_set_cpu, 1])
+        gpu: false
+        memory: select_first([runtime_set_memory, 8]) + " GB"
+        disks: "local-disk " + select_first([runtime_set_disk, 25]) + if use_ssd then " SSD" else " HDD"
+        maxRetries: select_first([runtime_set_max_retries, 0])
+        preemptible: select_first([runtime_set_preemptible_tries, 5])
+        returnCodes: 0
+     }
 }
