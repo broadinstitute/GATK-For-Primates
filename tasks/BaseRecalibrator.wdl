@@ -99,6 +99,13 @@ task AnalyzeCovariates {
     command <<<
         set -euo pipefail
 
+        # The required R packages are not in Broad's production GITC image
+        R --vanilla << CODE
+        install.packages("gplots", repos="http://cran.us.r-project.org")
+        install.packages("gsalib", repos="http://cran.us.r-project.org")
+        install.packages("reshape", repos="http://cran.us.r-project.org")
+        CODE
+        
         gatk --java-options "-Xmx~{command_mem_gb}G" \
         AnalyzeCovariates \
         -before ~{table_before} \
