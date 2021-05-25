@@ -101,8 +101,8 @@ task AnalyzeCovariates {
 
         gatk --java-options "-Xmx~{command_mem_gb}G" \
         AnalyzeCovariates \
-        -before ~{sampleName}.before.table \
-        -after ~{sampleName}.after.table \
+        -before ~{table_before} \
+        -after ~{table_after} \
         -plots ~{sampleName}.AnalyzeCovariates_plots.pdf \
         --use-jdk-deflater \
         --use-jdk-inflater
