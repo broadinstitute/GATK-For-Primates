@@ -55,7 +55,7 @@ task BaseRecalibrator {
 
         #GENERATE PLOTS
         #gatk \
-        AnalyzeCovariates \
+        #AnalyzeCovariates \
         #-before ~{sampleName}.before.table \
         #-after ~{sampleName}.after.table \
         #-plots ~{sampleName}.AnalyzeCovariates_plots.pdf \
