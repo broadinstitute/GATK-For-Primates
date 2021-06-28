@@ -1,69 +1,139 @@
-# GATK-for-Primates: GATK Best Practices for Variant Calling in Non-Human Primate Genomes
+# GATK-for-Primates: GATK Best Practices for Variant Calling in Non-Human Primate Genomes (pre-alpha version)
 
-## IMPORTANT NOTE: THIS IS A PRE-ALPHA WORKFLOW CURRENTLY UNDER DEVELOPMENT!
+A reproducible pipeline for germline SNP and Indel variant calling in non-human primate whole-genome re-sequencing data.
 
+This pipeline is in the **pre-alpha** stage of development. Please do not  use this pipeline until we have completed initial benchmarking. Once we see promising results with sensitivity and precision, we'll seek the community's feedback to make additional improvements.
 
-### Purpose:
+**Usage:** `cromwell run gatk-for-primates-germline-snps-indels.wdl -i inputs.json`
 
-This workflow (gatk-for-primates-germline-snps-indels.wdl) facilitates [germline short variant discovery](https://gatk.broadinstitute.org/hc/en-us/articles/360035535932) from whole genomes of non-human primates, following proposed GATK Best Practices for Non-Human Animal Genomes. Capitalizing on new features in GATK4, the pipeline enables base recalibration and variant calling in the absence of 'gold standard' truth and training sets. Though principally designed for non-human primate data, the pipeline may be adapted for other non-human animal species. Beyond animals, more appropriate GATK Best Practices might be available, e.g. [GATK for Microbes](https://github.com/broadinstitute/GATK-for-Microbes).
+## Summary:
 
-### Modes of operation:
+The [Genome Analysis Tool Kit (GATK)](https://gatk.broadinstitute.org/) remains the premier software package for variant discovery and genotyping from next-generation resequencing reads. Though originally developed for human genetics, GATK has evolved to handle genome data from any organism, with any level of ploidy. Nonetheless, the existing [‘best practices’](https://currentprotocols.onlinelibrary.wiley.com/doi/abs/10.1002/0471250953.bi1110s43) and [published workflows](https://gatk.broadinstitute.org/hc/en-us/sections/360007226651-Best-Practices-Workflows) are focused solely on processing human data. Here, we present a [WDL ‘best practices’ pipeline](https://gatk.broadinstitute.org/hc/en-us/articles/360035889771-Pipelining-GATK-with-WDL-and-Cromwell)  for [germline short variant discovery](https://gatk.broadinstitute.org/hc/en-us/articles/360035535932) in non-human primate whole genome re-sequencing data. The pipeline fully automates [Base Quality Score Recalibration (BQSR)](https://gatk.broadinstitute.org/hc/en-us/articles/360035890531-Base-Quality-Score-Recalibration-BQSR-) in the absence of 'gold standard' training sets, by applying hard-filtered variants from initial rounds of variant calling. [Hard-filtering is also used](https://gatk.broadinstitute.org/hc/en-us/articles/360035531112--How-to-Filter-variants-either-with-VQSR-or-by-hard-filtering) in place of [Variant Quality Score Recalibration (VQSR)](https://gatk.broadinstitute.org/hc/en-us/articles/360035531612-Variant-Quality-Score-Recalibration-VQSR-), though partial or full VQSR will proceed if either SNP, Indel or both truthing sets are provided. Moreover, capitalizing on new features since GATK 4.0.12.0, the pipeline can facilitate the co-analysis of samples from multiple taxonomic units (_e.g._ species within a genus) — a common-use scenario in wildlife comparative genomics — enabling the discovery and consistent genotyping of low-frequency alleles across units. To expedite the pipeline, we take a [‘scatter-gather’ approach to parallelization](https://gatk.broadinstitute.org/hc/en-us/articles/360035532012-Parallelism-Multithreading-Scatter-Gather), which can be easily adapted for use on single computers or any high-throughput platform. A [Terra](https://www.terra.bio/) workspace for this pipeline will be available soon.
 
-The workflow operates in one of three modes, as specified in the mandatory input JSON file: initial, repeat or final.
+Though principally designed for non-human primate data, the pipeline may be adapted for other non-human animal species, for which new GATK Best Practices are currently in development. Beyond animals, more appropriate GATK Best Practices might be available, e.g. via the [GATK for Microbes](https://github.com/broadinstitute/GATK-for-Microbes) pipeline.
 
-#### 'Initial' mode
-In initial mode, the workflow takes non-interleaved paired-end FASTQ reads, maps these to the reference genome, performs an initial round of variant calls, hard-filters those calls, and uses these to perform Base Quality Score Recalibration (BQSR). The output includes recalibrated BAM files for each individual, plus the necessary to tables and plots to evaluate if convergence has been reached.
+## Modes of operation:
 
-#### 'Repeat' mode
-In repeat mode, the workflow operates as in 'initial' mode, but starts with input BAM files instead of FASTQ reads. The input BAM files could either be a) BAM files that the user has previously mapped, and which require recalibration, or b) the output BAM files from 'initial' mode, which require further rounds of BQSR until covergence is reached.
+The workflow operates in one of three modes, as specified in the mandatory input JSON file: `initial`, `repeat` or `final`.
 
-#### 'Final' mode
-In final mode, the workflow calls variants and then performs either Variant Quality Score Recalibration (VQSR) and/or hard-filtering of variants. The output comprises genomicsdb files (to which further samples can be added later, beyond this pipeline) plus final variant calls from downstream analysis.
+#### Initial mode
+In `initial` mode, the workflow takes non-interleaved paired-end FASTQ reads or unmapped BAM files, maps these to the reference genome, performs an initial round of variant calls, hard-filters those calls, and uses these to perform BQSR. The output includes recalibrated BAM files for each individual, plus the necessary tables and plots to evaluate convergence. If individuals of multiple taxa are provided, variant calling is performed separately across each taxon, and again across the entire cohort.
 
-### Truth and training sets
+#### Repeat mode
+In `repeat` mode, the workflow operates as in `initial` mode, but the user provides the recalibrated BAM files (from the previous round) as inputs. Repeat mode should be run until convergence has been reached; typically, this shouldn't require more than two rounds. Previously mapped BAM files can also be provided at this stage, in lieu of unmapped data.
 
-'Truth' sets for either SNPs and/or INDELs can be supplied in the input JSON. If both are supplied, the workflow will perform VQSR using hard-filtered variants as the training set and the input files at the truth sets.
+#### Final mode
+In `final` mode, the workflow operates as in `repeat` mode, followed by filtering of variant calls. If 'gold standard' SNP and Indel sets are provided, these are used as 'truth' sets in VQSR, alongside hard-filtered 'training' sets generated by the pipeline. Recalibration is performed in series (Indels, then SNPs) across all unfiltered variant calls. If only one 'gold standard' set is provided (_e.g._ SNPs), recalibration is first performed on all unfiltered variant calls using that truth set; the results are then merged with the hard-filtered calls from the other variant type (_i.e._ Indels, in this example). All sites that pass this stage are then used as a 'master list', and all samples are re-genotyped at these loci. The final output comprises a tarred genomicsdb (to which further samples can be added later, beyond this pipeline) plus the final VCF-format variant calls for downstream applications.
 
-If a 'truth' set is supplied for either SNPs or INDELs (but not both), then one will be subject to VQSR and the other to hard filtering. This is likely to be common in wildlife cases: SNP truth sets may be readily available (e.g. in the form of SNP microarray data) whereas INDEL truth sets are more difficult to come by.
+## Using the pipeline with multiple taxonomic units
 
-If no truth sets are supplied, VQSR will be skipped and hard-filtering performed instead.
+In its simplest form, this pipeline can be run for multiple individuals comprising the same taxonomic unit (_e.g._ species). This will occur automatically if all input samples have the same `taxon_group` (see 'Configuring the JSON input file', below).
 
+However, the pipeline can also be used to call variants across multiple (but closely related) taxonomic groups, _e.g._ multiple subspecies within a species, or multiple species within a genus. To achieve this, group the samples using the same `taxon_group`. The pipeline will then perform each stage for each group separately, then again for all samples across the entire cohort. The resulting variants are merged together during base and variant quality score recalibration, and when generating the 'master list' of loci. All individuals, irrespective of taxonomic group, are then consistently genotyped at the same positions. This can facilitate the identification of rare alleles that might only persist within a single unit (_e.g._ in only one species) and to identify low-frequency alleles (_e.g._ those across the genus).
 
-### Structure of input samples
+## Requirements
 
-In its simplest form, this pipeline can be run for multiple individuals comprising the same taxonomic unit (e.g. species). *NOTE: THIS DOESN'T WORK AT PRESENT*
-
-However, a common-use scenario in wildlife comparative genomics is to call variants across individuals from multiple (but closely related) taxonomic units -- e.g. multiple species within a genus. In this case, the pipeline will call variants in the individuals of each taxonomic unit separately (e.g. each species), plus in all individuals combined (e.g. across the genus). This is done to identify rare alleles that might only persist within a single unit (e.g. in only one species) plus to identify low-frequency alleles (e.g. those across the genus). All these loci are then combined into a master callset, and each individual is re-genotyped at all of these loci. *NOTE: THIS WORKS AT PRESENT... HOWEVER, IT DOES NOT CALL ALL INDIVIDUALS TOGETHER (AS GENUS). I WILL IMPLEMENT THIS SOON.*
-
-The pipeline will determine how best to operate based on the input JSON file. If individuals of only one unit (defined as 'group' in the JSON) are supplied, then the pipeline will perform in the former fashion. If multiple units are supplied, the pipeline will call separately for each unit and again for all samples together.
-
-### Requirements
-
-#### Input requirements/expectations:
-- Paired-end reads in FASTQ format (for 'initial' mode) or mapped and de-duplicated BAM files with read group information (for 'repeat' and 'final' modes).
-- A reference genome indexed using either bwa or bwa-mem2.
-- An input JSON file listing the reference, the required metadata for each sample, and any optional parameters.
-- Truth SNP and/or INDEL sets, if available.
-- A list of 'scatters', either produced with ScatterIntervalsByNs (as described in the paper) or with the third-party Python tool, [ScaffoldStitcher](https://github.com/ameliahaj/ScaffoldStitcher)
-
-
-#### Software version requirements :
+### Software version requirements :
 - GATK 4.2.0.0
-- Samtools 1.1.2
-- Python 2.7
-- Cromwell version support 
-  - Testing in progress on v58
+- Samtools 1.11
+- bwa 0.7.15
+- Python 3.9.5
+- Cromwell 63 (using the 'development' version of WDL)
+- Docker support
 
-### IMPORTANT NOTES AND CAVEATS :
-- The workflow requires the 'development' version of WDL.
-- The workflow implements the GATK allele-specific filtering workflow that is currently in beta.
-- At present, SNPs and INDELs are either recalibrated or filtered separately. I need to re-code this so that, if truth sets are supplied for SNPs and INDELs, they are recalibrated in series versus in sequence. Otherwise, [mixed sites will fail to be processed correctly in alelle-specific mode](https://gatk.broadinstitute.org/hc/en-us/articles/360035890551?id=9622).
-- The --merge-contigs-into-num-partitions parameter is set to 0 (default), but can (and probably should) be configured to a higher value in the input JSON [as explained here](https://gatk.broadinstitute.org/hc/en-us/articles/360056138571-GDBI-usage-and-performance-guidelines). When preparing the final GenomicsDB during re-genotyping at the master callset of loci, the parameter is set to "1" (due to many small contigs, each comprising very little data).
-- Re-genotyping at the master callset capitalizes on the aforementioned "--merge-contigs-into-num-partitions" parameter in ImportGenomicsDB, plus on the "--include-non-variant-sites" option in GenotypeGVCFs [as implemented in GATK 4.0.12.0](https://github.com/broadinstitute/gatk/releases/tag/4.0.12.0).
-- Code for producing AnalyzeCovariates plots is currently commented out because the GATK4 docker does not have the required R libraries. Is there a docker image that has both R and the gsalib and ggplot2?
-- No error checking/validation of input JSON options is implemented yet. Inputting contradictory options (e.g. mode = initial but with BAM inputs) may cause the workflow to fail.
-- I had to remove "--merge-contigs-into-num-partitions" from GenomicsDBImport because it doesn't work as I expected -- it requires whole contigs versus intervals. I will re-visit this.
-- Some tasks run on docker, some don't. I'll fix this.
-- I haven't even tried this with Terra yet.
-- I made up the scatters in the input JSON, I just split the chr into three parts. They are not separated by blocks of NNNs; hence, this was just to test the functionality rather than the utility of the workflow just by using dummy data.
-- You could add more samples/groups to the input JSON if you wish; there are a few extra dummy samples (two from two other species of golden monkey) in the Google bucket.
+### Input requirements/expectations:
+- Cleaned-up paired-end reads in de-interleaved FASTQ format, unmapped BAM files, for 'initial' mode; mapped and de-duplicated BAM files for 'repeat' and 'final' modes.
+- Read group information, either provided with the JSON input for FASTQ files, or included in uBAM or BAM files. 
+- A reference genome indexed using either bwa or bwa-mem2 (support for bwa-mem2 is coming soon).
+- Truth SNP and/or Indel sets, if available, in either uncompressed or gzip-compressed VCF format with TBI index(es).
+- A list of 'scatters', either produced with ScatterIntervalsByNs (to be described in a forthcoming paper) or with the third-party Python tool, [ScaffoldStitcher](https://github.com/ameliahaj/ScaffoldStitcher).
+
+## Configuring the JSON input file:
+
+The pipeline is optimized for user inputs to be as simple and limited as possible. Beyond the required files (_e.g._ reference and index files; FASTQ, BAM or uBAM files), all configuration and parameters are supplied in a single JSON input file.
+
+### Mandatory options
+
+**The following options must be set in the input JSON file:**
+
+| Mode | Option | Type | Description |
+| --- | ------ | ---- | ---- |
+| All | `mode` | String | `initial`, `repeat`, or `final` |
+| All | `ref` | File | Reference file in `.vcf` or `.vcf.gz` format |
+| All | `ref_dict` | File | Reference dictionary file in `.dict` format |
+| All | `ref_fai` | File | Reference index file in `.fai` format |
+| Initial | `bwamem2` | Boolean | Set 'true' to use bwa-mem2 instead of bwa mem. |
+| Initial | `ref_amb` | File | Required if using bwa mem or bwa-mem2 |
+| Initial | `ref_ann` | File | Required if using bwa mem or bwa-mem2 |
+| Initial | `ref_pac` | File | Required if using bwa mem or bwa-mem2 |
+| Initial | `ref_bwt` | File | Required if using bwa mem or bwa-mem2 |
+| Initial | `ref_sa` | File | Required if using bwa mem only |
+| Initial | `ref_0123` | File | Required if using bwa-mem2 only |
+| Initial | `ref_bwt_2bit_64` | File | Required if using bwa-mem2 only |
+<br />
+
+**The following data must always be provided for each user-defined scatter, as a `scatterList` object of name-value pairs:**
+
+| Name | Type | Description |
+| ------ | ---- | ---- |
+| `name` | String | Name of user-defined scatter |
+| `intervals` | String | Comma-separated list in chr:pos format, _e.g._ `chr21:1-27800000` |
+<br />
+
+**The following data must always be provided for each sample, as a `sampleList` object of name-value pairs:**
+
+| Name | Type | Description |
+| ------ | ---- | ---- |
+| `name` | String | Name of sample or individual. |
+| `taxon_group` | String | Taxonomic group name. This is used to group individuals by taxon. |
+<br />
+
+**The `sampleList` object must also contain the following, depending on mode and sample input type:**
+
+| Input Type | Name | Mode | Type |  Description |
+| ------ | ------ | ---- | ---- | ---- |
+| FASTQ: | `R1` | Initial | File | First of two FASTQ files, required if mapping from FASTQ reads  |
+| - | `R2` | Initial | File | Second of two FASTQ files, required if mapping from FASTQ reads  |
+| - | `RG_ID` | Initial | File | Read group data; required if mapping from FASTQ reads  |
+| - | `RG_SM` | Initial | File | Read group data; required if mapping from FASTQ reads  |
+| - | `RG_PU` | Initial | File | Read group data; required if mapping from FASTQ reads  |
+| uBAM: | `unmapped_bam` | Initial | File | Unmapped BAM file if not mapping from FASTQ; must contain all read group data  |
+| BAM: | `bam` | Repeat/Final | File | Recalibrated BAM file, _e.g._ from previous mode, required in each of these modes |
+| - | `bam_index` | Repeat/Final | File |  Recalibrated BAM file index, required in each of these modes  |
+
+### Common optional inputs
+
+**The following options may also be set, depending on mode of operation:**
+
+| Mode | Option | Type | Description |
+| --- | --- | --- | --- |
+| Initial | `validate_reference_vcf` | Boolean | Set `true` to perform `ValidateVariants` on the reference. |
+| Initial | `flowcell_patterned` | Boolean | Set `true` if flowcell is patterened, this influences pixel distance when marking duplicates. |
+| Any | `truth_set_SNPs` | File | Truth set of known SNPs in `.vcf` or `.vcf.gz` format |
+| Any | `truth_set_SNPs_index` | File | Index to the above file, in `.tbi` format |
+| Any | `truth_set_INDELs` | File | Truth set of known Indels in `.vcf` or `.vcf.gz` format |
+| Any | `truth_set_INDELs_index` | File | Index to the above file, in `.tbi` format |
+| Any | `validate_truth_sets` | Boolean | Set `true` to perform `ValidateVariants` on the truth sets |
+| Any | `merge_contigs_into_num_partitions` | Int | Optional parameter for `GenomicsDBImport` |
+| Any | `container_gatk` | String | Default is `broadinstitute/gatk:4.2.0.0` |
+| Any | `container_gitc` | String | Default is `us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.5.7-2021-06-09_16-47-48Z` |
+| Any | `container_python` | String | Default is `python:3.9.5` |
+| Any | `path_to_gitc` | String | Default is `/usr/gitc` |
+| Any | `path_to_gitc_gatk` | String | Default is `/usr/gitc/gatk4/` |
+<br />
+Other options are available for advanced users, _e.g._ to configure the resources assigned to container instances. If you know how to use these correctly, you'll also know how to find them!
+
+## Important notes and caveats to consider
+
+- This pipeline is reliant on new functions only available in the 'development' version of WDL. Fortunately, these are implemented in Cromwell 63.
+- Allele-specific annotations are added throughout, though full support of [allele-specific filtering](https://gatk.broadinstitute.org/hc/en-us/articles/360035890551?id=9622) is not yet implemented.
+- If no truth sets are provided, or if only one truth set is provided, multi-allelic variants are first split to be biallelic (using `LeftAlignAndTrimVariants`) and then split into separate SNP and Indel files (using `SplitVcfs`). This is imperative, else — at least in allele-specific mode — [mixed sites will fail to be processed correctly](https://gatk.broadinstitute.org/hc/en-us/articles/360035890551?id=9622). If both truth sets are provided, the unfiltered variants are recalibrated with `ApplyVQSR` run in series, as recommended.
+- The --merge-contigs-into-num-partitions parameter is set to 0 (default), but can (and probably should) be configured to a higher value in the input JSON [as explained here](https://gatk.broadinstitute.org/hc/en-us/articles/360056138571-GDBI-usage-and-performance-guidelines). When preparing the final GenomicsDB during re-genotyping at the master callset of loci, the parameter is set to "1" (due to many small contigs, each comprising very little data). Optimizing `GenomicsDBImport` should be a priority when evaluating the pipeline. At present it is removed from the command execution as it does not work as I expected: it requires whole contigs versus intervals, and thus this approach needs re-visiting.
+- Re-genotyping at the master callset capitalizes on the `--include-non-variant-sites` option in `GenotypeGVCFs` [as implemented in GATK 4.0.12.0](https://github.com/broadinstitute/gatk/releases/tag/4.0.12.0).
+- The pipeline currently uses the Broad's production container for 'Genomes in the Cloud', which uses outdated versions of all tools (_i.e._ GATK 4.1.8.0 versus 4.2.0.0; bwa 0.7.15 versus 0.7.17; samtools 1.11 versus 1.12). This container is only used when mapping reads or when running `AnalyzeCovariates`. Ideally, we should create a new container comprising the latest versions ([per this issue](https://github.com/broadinstitute/GATK-For-Primates/issues/9)).
+- When running `AnalyzeCovariates`, the required 'R' libraries are downloaded and installed each time. This is not optimal; hence, a new container (above) is preferable.
+
+
+## Acknowledgements
+
+This pipeline is a collaborative effort by the [Broad Institute](https://www.broadinstitute.org) ([@bhanugandham](https://github.com/bhanugandham)) and the [Wisconsin National Primate Research Center](https://primate.wisc.edu/) at the [University of Wisconsin—Madison](https://www.wisc.edu/) ([@grahamlbanes](https://github.com/grahamlbanes)), with support in part by the Office of the Director, [National Institutes of Health](https://www.nih/gov/) (P51OD011106). Development was partially facilitated by the compute resources and assistance of the [UW-Madison Center For High Throughput Computing (CHTC)](https://chtc.cs.wisc.edu) in the Department of Computer Sciences. The CHTC is supported by UW-Madison, the [Advanced Computing Initiative](https://aci.wisc.edu), the [Wisconsin Alumni Research Foundation](https://www.warf.org/), the [Wisconsin Institutes for Discovery](https://discovery.wisc.edu), and the [National Science Foundation (NSF)](https://www.nsf.gov/), and is an active member of the [Open Science Grid](https://opensciencegrid.org), which is supported by NSF and the [U.S. Department of Energy's Office of Science](https://www.energy.gov/science/office-science).
