@@ -94,9 +94,9 @@ The pipeline is optimized for user inputs to be as simple and limited as possibl
 | ------ | ------ | ---- | ---- | ---- |
 | FASTQ: | `R1` | Initial | File | First of the paired-end FASTQ files.  |
 | - | `R2` | Initial | File | Second of the paired-end FASTQ files.  |
-| - | `RG_ID` | Initial | File | Read group ID.  |
-| - | `RG_SM` | Initial | File | Read group sample name. |
-| - | `RG_PU` | Initial | File | Read group platform unit. Note this is used in BQSR, which models together all reads with the same PU. |
+| - | `RG_ID` | Initial | String | Read group ID.  |
+| - | `RG_SM` | Initial | String | Read group sample name. |
+| - | `RG_PU` | Initial | String | Read group platform unit. Note this is used in BQSR, which models together all reads with the same PU. |
 | uBAM: | `unmapped_bam` | Initial | File | Unmapped BAM file if not mapping from FASTQ; must contain all read group data.  |
 | BAM: | `bam` | Repeat/Final | File | Recalibrated BAM file, _e.g._ from previous mode, required in each of these modes. |
 | - | `bam_index` | Repeat/Final | File |  Recalibrated BAM file index, required in each of these modes.  |
@@ -121,7 +121,7 @@ The pipeline is optimized for user inputs to be as simple and limited as possibl
 | Any | `path_to_gitc` | String? | Default is `/usr/gitc`. |
 | Any | `path_to_gitc_gatk` | String? | Default is `/usr/gitc/gatk4/`. |
 <br />
-Other options are available for advanced users, _e.g._ to configure the resources assigned to container instances. If you know how to use these correctly, you'll also know how to find them!
+Other options are available for advanced users; specifically, to configure the resources assigned to container instances. If you know how to use these correctly, you'll also know how to find them!
 
 ## Important notes and caveats to consider
 
