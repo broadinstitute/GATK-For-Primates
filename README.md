@@ -1,4 +1,4 @@
-# GATK-for-Primates: GATK Best Practices for Variant Calling in Non-Human Primate Genomes (pre-alpha version)
+# GATK-for-Primates: GATK Best Practices for Variant Calling in Non-Human Primate Genomes (pre-alpha)
 
 A reproducible pipeline for germline SNP and Indel variant calling in non-human primate whole-genome re-sequencing data.
 
@@ -14,7 +14,7 @@ Though principally designed for non-human primate data, the pipeline may be adap
 
 ## Modes of operation:
 
-The workflow operates in one of three modes, as specified in the mandatory input JSON file: `initial`, `repeat` or `final`.
+The workflow operates in one of three modes, to be specified in the input JSON file: `initial`, `repeat` or `final`.
 
 #### Initial mode
 In `initial` mode, the workflow takes non-interleaved paired-end FASTQ reads or unmapped BAM files, maps these to the reference genome, performs an initial round of variant calls, hard-filters those calls, and uses these to perform BQSR. The output includes recalibrated BAM files for each individual, plus the necessary tables and plots to evaluate convergence. If individuals of multiple taxa are provided, variant calling is performed separately across each taxon, and again across the entire cohort.
@@ -29,7 +29,7 @@ In `final` mode, the workflow operates as in `repeat` mode, followed by filterin
 
 In its simplest form, this pipeline can be run for multiple individuals comprising the same taxonomic unit (_e.g._ species). This will occur automatically if all input samples have the same `taxon_group` (see 'Configuring the JSON input file', below).
 
-However, the pipeline can also be used to call variants across multiple (but closely related) taxonomic groups, _e.g._ multiple subspecies within a species, or multiple species within a genus. To achieve this, group the samples using the same `taxon_group`. The pipeline will then perform each stage for each group separately, then again for all samples across the entire cohort. The resulting variants are merged together during base and variant quality score recalibration, and when generating the 'master list' of loci. All individuals, irrespective of taxonomic group, are then consistently genotyped at the same positions. This can facilitate the identification of rare alleles that might only persist within a single unit (_e.g._ in only one species) and to identify low-frequency alleles (_e.g._ those across the genus).
+However, the pipeline can also be used to call variants across multiple (but closely related) taxonomic groups, _e.g._ multiple subspecies within a species, or multiple species within a genus (as grouped by the same `taxon_group`). The pipeline will then perform each stage for each group separately, then again for all samples across the entire cohort. The resulting variants are merged together during base and variant quality score recalibration, and when generating the 'master list' of loci. All individuals, irrespective of taxonomic group, are then consistently genotyped at the same positions. This can facilitate the identification of rare alleles that might only persist within a single unit (_e.g._ in only one species) and to identify low-frequency alleles (_e.g._ those across the genus).
 
 ## Requirements
 
@@ -50,7 +50,7 @@ However, the pipeline can also be used to call variants across multiple (but clo
 
 ## Configuring the JSON input file:
 
-The pipeline is optimized for user inputs to be as simple and limited as possible. Beyond the required files (_e.g._ reference and index files; FASTQ, BAM or uBAM files), all configuration and parameters are supplied in a single JSON input file.
+The pipeline is optimized for user inputs to be as simple and limited as possible. Beyond the required files (_i.e._ reference and index files; FASTQ, BAM or uBAM files), all configuration and parameters are supplied in a single JSON input file.
 
 ### Mandatory options
 
@@ -72,7 +72,7 @@ The pipeline is optimized for user inputs to be as simple and limited as possibl
 | Initial | `ref_bwt_2bit_64` | File | Required if using bwa-mem2 only |
 <br />
 
-**The following data must always be provided for each user-defined scatter, as a `scatterList` object of name-value pairs:**
+**The following must always be provided for each user-defined scatter, as a `scatterList` objects:**
 
 | Name | Type | Description |
 | ------ | ---- | ---- |
@@ -80,7 +80,7 @@ The pipeline is optimized for user inputs to be as simple and limited as possibl
 | `intervals` | String | Comma-separated list in chr:pos format, _e.g._ `chr21:1-27800000` |
 <br />
 
-**The following data must always be provided for each sample, as a `sampleList` object of name-value pairs:**
+**The following must always be provided for each sample, as a `sampleList` object:**
 
 | Name | Type | Description |
 | ------ | ---- | ---- |
@@ -92,14 +92,14 @@ The pipeline is optimized for user inputs to be as simple and limited as possibl
 
 | Input Type | Name | Mode | Type |  Description |
 | ------ | ------ | ---- | ---- | ---- |
-| FASTQ: | `R1` | Initial | File | First of two FASTQ files, required if mapping from FASTQ reads  |
-| - | `R2` | Initial | File | Second of two FASTQ files, required if mapping from FASTQ reads  |
-| - | `RG_ID` | Initial | File | Read group data; required if mapping from FASTQ reads  |
-| - | `RG_SM` | Initial | File | Read group data; required if mapping from FASTQ reads  |
-| - | `RG_PU` | Initial | File | Read group data; required if mapping from FASTQ reads  |
-| uBAM: | `unmapped_bam` | Initial | File | Unmapped BAM file if not mapping from FASTQ; must contain all read group data  |
-| BAM: | `bam` | Repeat/Final | File | Recalibrated BAM file, _e.g._ from previous mode, required in each of these modes |
-| - | `bam_index` | Repeat/Final | File |  Recalibrated BAM file index, required in each of these modes  |
+| FASTQ: | `R1` | Initial | File | First of the paired-end FASTQ files.  |
+| - | `R2` | Initial | File | Second of the paired-end FASTQ files.  |
+| - | `RG_ID` | Initial | File | Read group ID.  |
+| - | `RG_SM` | Initial | File | Read group sample name. |
+| - | `RG_PU` | Initial | File | Read group platform unit. Note this is used in BQSR, which models together all reads with the same PU. |
+| uBAM: | `unmapped_bam` | Initial | File | Unmapped BAM file if not mapping from FASTQ; must contain all read group data.  |
+| BAM: | `bam` | Repeat/Final | File | Recalibrated BAM file, _e.g._ from previous mode, required in each of these modes. |
+| - | `bam_index` | Repeat/Final | File |  Recalibrated BAM file index, required in each of these modes.  |
 
 ### Common optional inputs
 
@@ -109,17 +109,17 @@ The pipeline is optimized for user inputs to be as simple and limited as possibl
 | --- | --- | --- | --- |
 | Initial | `validate_reference_vcf` | Boolean | Set `true` to perform `ValidateVariants` on the reference. |
 | Initial | `flowcell_patterned` | Boolean | Set `true` if flowcell is patterened, this influences pixel distance when marking duplicates. |
-| Any | `truth_set_SNPs` | File | Truth set of known SNPs in `.vcf` or `.vcf.gz` format |
-| Any | `truth_set_SNPs_index` | File | Index to the above file, in `.tbi` format |
-| Any | `truth_set_INDELs` | File | Truth set of known Indels in `.vcf` or `.vcf.gz` format |
-| Any | `truth_set_INDELs_index` | File | Index to the above file, in `.tbi` format |
-| Any | `validate_truth_sets` | Boolean | Set `true` to perform `ValidateVariants` on the truth sets |
-| Any | `merge_contigs_into_num_partitions` | Int | Optional parameter for `GenomicsDBImport` |
-| Any | `container_gatk` | String | Default is `broadinstitute/gatk:4.2.0.0` |
-| Any | `container_gitc` | String | Default is `us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.5.7-2021-06-09_16-47-48Z` |
-| Any | `container_python` | String | Default is `python:3.9.5` |
-| Any | `path_to_gitc` | String | Default is `/usr/gitc` |
-| Any | `path_to_gitc_gatk` | String | Default is `/usr/gitc/gatk4/` |
+| Any | `truth_set_SNPs` | File? | Truth set of known SNPs in `.vcf` or `.vcf.gz` format. |
+| Any | `truth_set_SNPs_index` | File? | Index to the above file, in `.tbi` format. |
+| Any | `truth_set_INDELs` | File? | Truth set of known Indels in `.vcf` or `.vcf.gz` format. |
+| Any | `truth_set_INDELs_index` | File? | Index to the above file, in `.tbi` format. |
+| Any | `validate_truth_sets` | Boolean | Set `true` to perform `ValidateVariants` on the truth sets. |
+| Any | `merge_contigs_into_num_partitions` | Int? | Optional parameter for `GenomicsDBImport`. |
+| Any | `container_gatk` | String? | Default is `broadinstitute/gatk:4.2.0.0`. |
+| Any | `container_gitc` | String? | Default is `us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.5.7-2021-06-09_16-47-48Z`. |
+| Any | `container_python` | String? | Default is `python:3.9.5`. |
+| Any | `path_to_gitc` | String? | Default is `/usr/gitc`. |
+| Any | `path_to_gitc_gatk` | String? | Default is `/usr/gitc/gatk4/`. |
 <br />
 Other options are available for advanced users, _e.g._ to configure the resources assigned to container instances. If you know how to use these correctly, you'll also know how to find them!
 
