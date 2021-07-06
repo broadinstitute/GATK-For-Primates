@@ -1,4 +1,4 @@
-version 1.0
+version 1.1
 
 ## Copyright Broad Institute and Wisconsin National Primate Research Center,
 ## University of Wisconsin-Madison, 2021
