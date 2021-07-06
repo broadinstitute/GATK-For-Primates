@@ -1,5 +1,7 @@
 # GATK-for-Primates: GATK Best Practices for Variant Calling in Non-Human Primate Genomes (pre-alpha)
 
+## This repo is not ready for use yet and stil under development!
+
 A reproducible pipeline for germline SNP and Indel variant calling in non-human primate whole-genome re-sequencing data.
 
 This pipeline is in the **pre-alpha** stage of development. Please do not  use this pipeline until we have completed initial benchmarking. Once we see promising results with sensitivity and precision, we'll seek the community's feedback to make additional improvements.
