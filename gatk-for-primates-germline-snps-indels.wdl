@@ -37,6 +37,7 @@ import "./tasks/ProcessVCFs.wdl" as processVCFs
 import "./workflows/VariantRecalibration.wdl" as variantRecalibration
 import "./workflows/VariantRecalibrationPartial.wdl" as partialVariantRecalibration
 import "./workflows/BaseRecalibration.wdl" as baseRecalibration
+import "./workflows/functions/CollectByKey.wdl" as collectByKey
 
 ##########################################################################
 ## WORKFLOW DEFINITION
@@ -223,18 +224,27 @@ workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
         }
 
         ## Scatter over each group, collecting haplotype gVCF files for each
-        scatter (pair in as_pairs(collect_by_key(zip(select_all(haplotype_groupNames),select_all(haplotype_gvcfs))))) {
+        ## WDL 1.1: scatter (pair in as_pairs(collect_by_key(zip(select_all(haplotype_groupNames),select_all(haplotype_gvcfs))))) {
+        ## Code below for WDL 1.0:
+        call collectByKey.collectByKey as collectHaplotypesByGroup {
+            input:
+                allGroups = validateUserInputs.groupNames,
+                groups = select_all(haplotype_groupNames),
+                members = select_all(haplotype_gvcfs),
+        }
 
-            scatter (each_haplotype_gvcf in pair.right) {
-                String each_haplotype_gvcf_index = each_haplotype_gvcf + ".tbi"
-            }
+        scatter (pair in collectHaplotypesByGroup.collected) {
 
+            ## Restore in WDL 1.1
+            #scatter (each_haplotype_gvcf in pair.right) {
+            #    String each_haplotype_gvcf_index = each_haplotype_gvcf + ".tbi"
+            #}
 
             ## Import haplotypes to GenomicsDBs
             call bamToVcf.genomicsDBImport as genomicsDBImport {
                 input:
                     input_gvcfs = pair.right,
-                    input_gvcfs_indexes = each_haplotype_gvcf_index,
+                    input_gvcfs_indexes = collectHaplotypesByGroup.collected_indexes, #each_haplotype_gvcf_index, # bottleneck, it takes all indexes right now
                     title_gdb = "gdb_" + pair.left + "_" + scttr.name,
                     scatterIntervals = scttr.intervals,
                     merge_contigs_into_num_partitions = merge_contigs_into_num_partitions,
@@ -266,7 +276,18 @@ workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
     ## Produce and pipe the variants that are needed downstream
     ####################################################################
 
-    scatter (pair in as_pairs(collect_by_key(zip(select_all(flatten(genotypeGenomicsDB.output_groupName)),select_all(flatten(genotypeGenomicsDB.output_genotypes_vcf)))))) {
+    ## Scatter over each group, collecting genotype VCF files for each
+    ## WDL 1.1: scatter (pair in as_pairs(collect_by_key(zip(select_all(flatten(genotypeGenomicsDB.output_groupName)),select_all(flatten(genotypeGenomicsDB.output_genotypes_vcf)))))) {
+    ## Code below for WDL 1.0:
+    call collectByKey.collectByKey as collectGenotypesByGroup {
+        input:
+            allGroups = validateUserInputs.groupNames,
+            groups = select_all(flatten(genotypeGenomicsDB.output_groupName)),
+            members = select_all(flatten(genotypeGenomicsDB.output_genotypes_vcf)),
+    }
+    Array[Pair[String,Array[String]]] collectedGenotypesByGroup = collectGenotypesByGroup.collected
+    
+    scatter (pair in collectedGenotypesByGroup) {
 
         call pipeGenotypes.pipeGenotypes as pipe {
             input:
