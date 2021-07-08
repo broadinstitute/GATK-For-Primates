@@ -49,7 +49,7 @@ task haplotypeCaller {
     Int runtime_calculated_disk = ceil(size_input_files * 2.5)
     Int command_mem_gb = select_first([runtime_set_memory, 7]) - 1
     ## Task-specific parameters
-    String add_padding = if defined(masterLociVcf) then "--interval-padding 100 \\" else " "
+    String? add_padding = if defined(masterLociVcf) then "--interval-padding 100" else ""
     command {
         gatk \
         HaplotypeCaller --java-options "-Xmx~{command_mem_gb}G" \
@@ -113,7 +113,7 @@ task genomicsDBImport {
     ## Task-specific parameters
     ## This requires attention:
     ## Int merge_contigs_value = if defined(merge_contigs_into_num_partitions) then merge_contigs_into_num_partitions else "0"
-    String add_padding = if defined(masterLociVcf) then "--interval-padding 100 \\" else " "
+    String? add_padding = if defined(masterLociVcf) then "--interval-padding 100" else ""
     command <<<
     set -euo pipefail
 
@@ -183,7 +183,7 @@ task genotypeGenomicsDB {
     Int runtime_calculated_disk = ceil(size_input_files * 2.5) + 2
     Int command_mem_gb = select_first([runtime_set_memory, 8]) - 1
     ## Task-specific parameters
-    String genotype_non_variant_sites = if defined(masterLociVcf) then "--include-non-variant-sites\\" else " "
+    String? genotype_non_variant_sites = if defined(masterLociVcf) then "--include-non-variant-sites" else ""
     command <<<
     set -euo pipefail
 
