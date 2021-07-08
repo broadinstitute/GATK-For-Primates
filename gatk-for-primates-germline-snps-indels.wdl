@@ -240,11 +240,15 @@ workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
             #    String each_haplotype_gvcf_index = each_haplotype_gvcf + ".tbi"
             #}
 
+            scatter (each_haplotype_gvcf in pair.right) {
+                String each_haplotype_gvcf_index = each_haplotype_gvcf + ".tbi"
+            }
+            
             ## Import haplotypes to GenomicsDBs
             call bamToVcf.genomicsDBImport as genomicsDBImport {
                 input:
                     input_gvcfs = pair.right,
-                    input_gvcfs_indexes = collectHaplotypesByGroup.collected_indexes, #each_haplotype_gvcf_index, # bottleneck, it takes all indexes right now
+                    input_gvcfs_indexes = each_haplotype_gvcf_index,
                     title_gdb = "gdb_" + pair.left + "_" + scttr.name,
                     scatterIntervals = scttr.intervals,
                     merge_contigs_into_num_partitions = merge_contigs_into_num_partitions,
