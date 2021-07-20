@@ -58,7 +58,7 @@ The pipeline is optimized for user inputs to be as simple and limited as possibl
 | All | `ref` | File | Reference file in `.vcf` or `.vcf.gz` format |
 | All | `ref_dict` | File | Reference dictionary file in `.dict` format |
 | All | `ref_fai` | File | Reference index file in `.fai` format |
-| Initial | `bwamem2` | Boolean | Set 'true' to use bwa-mem2 instead of bwa mem. |
+| Initial | `bwamem2` | Boolean | Default is false. Set 'true' to use bwa-mem2 instead of bwa mem. |
 | Initial | `ref_amb` | File | Required if using bwa mem or bwa-mem2 |
 | Initial | `ref_ann` | File | Required if using bwa mem or bwa-mem2 |
 | Initial | `ref_pac` | File | Required if using bwa mem or bwa-mem2 |
@@ -66,7 +66,7 @@ The pipeline is optimized for user inputs to be as simple and limited as possibl
 | Initial | `ref_sa` | File | Required if using bwa mem only |
 | Initial | `ref_0123` | File | Required if using bwa-mem2 only |
 | Initial | `ref_bwt_2bit_64` | File | Required if using bwa-mem2 only |
-| Repeat/Final | `polymorphic_regions_json` | File? | Output from the prior `initial` or `repeat` mode. |
+| Repeat/Final | `polymorphic_regions_json` | File | Output from the prior `initial` or `repeat` mode. |
 <br />
 
 **The following must always be provided for each user-defined scatter, as a `scatterList` object:**
