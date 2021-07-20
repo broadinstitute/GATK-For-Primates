@@ -1,6 +1,6 @@
 # GATK-for-Primates: GATK Best Practices for Variant Calling in Non-Human Primate Genomes (alpha)
 
-## This repo is NOT ready for use yet and still under development!!
+## This repo is NOT ready for use yet and is still under development!!
 
 A reproducible pipeline for germline SNP and Indel variant calling in non-human primate whole-genome re-sequencing data.
 
@@ -66,6 +66,7 @@ The pipeline is optimized for user inputs to be as simple and limited as possibl
 | Initial | `ref_sa` | File | Required if using bwa mem only |
 | Initial | `ref_0123` | File | Required if using bwa-mem2 only |
 | Initial | `ref_bwt_2bit_64` | File | Required if using bwa-mem2 only |
+| Repeat/Final | `polymorphic_regions_json` | File? | Output from the prior `initial` or `repeat` mode. |
 <br />
 
 **The following must always be provided for each user-defined scatter, as a `scatterList` object:**
@@ -104,7 +105,7 @@ The pipeline is optimized for user inputs to be as simple and limited as possibl
 | Mode | Option | Type | Description |
 | --- | --- | --- | --- |
 | Initial | `validate_reference_vcf` | Boolean | Default is false. Set `true` to perform `ValidateVariants` on the reference. |
-| Initial | `flowcell_patterned` | Boolean | Default is true. Set `false` if flowcell is not patterned; this influences pixel distance when marking duplicates. |
+| Initial | `flowcell_patterned` | Boolean | Default is true; sets `--optical-duplicate-pixel-distance` in `MarkDuplicatesSpark` to 2500. Set `false` for 100. |
 | Any | `truth_set_SNPs` | File? | Truth set of known SNPs in `.vcf` or `.vcf.gz` format. |
 | Any | `truth_set_SNPs_index` | File? | Index to the above file, in `.tbi` format. |
 | Any | `truth_set_INDELs` | File? | Truth set of known Indels in `.vcf` or `.vcf.gz` format. |
