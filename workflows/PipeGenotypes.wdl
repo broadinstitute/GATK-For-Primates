@@ -40,7 +40,6 @@ workflow pipeGenotypes {
         String container
     }
 
-
 	## If unfiltered variants are needed in any form
 	if (pipe_unfiltered || pipe_unfiltered_sites_only) {
 
@@ -54,7 +53,7 @@ workflow pipeGenotypes {
             input:
                 input_vcfs = gdb_vcfs,
                 input_vcfs_indexes = gdb_vcf_indexes,
-                output_vcf_title = gdb_groupName + ".unfiltered_genotypes.",
+                output_vcf_title = gdb_groupName + ".unfiltered_genotypes",
                 groupName = gdb_groupName,
                 # Runtime
                 container = container,
@@ -72,7 +71,6 @@ workflow pipeGenotypes {
 	                input:
 	                    input_vcf = each_gdb_vcf,
 	                    input_vcf_index = each_gdb_vcf_index,
-	                    output_vcf_title = basename(each_gdb_vcf, ".vcf.gz") + ".unfiltered_genotypes_sites_only.",
 	                    groupName = gdb_groupName,
 	                    # Runtime
 	                    container = container,
@@ -84,7 +82,7 @@ workflow pipeGenotypes {
 	            input:
 	                input_vcfs = makeSitesOnlyEachUnfiltered.output_vcf,
 	                input_vcfs_indexes = makeSitesOnlyEachUnfiltered.output_vcf_index,
-	                output_vcf_title = gdb_groupName + ".unfiltered_genotypes.",
+	                output_vcf_title = gdb_groupName + ".unfiltered_genotypes",
 	                groupName = gdb_groupName,
 	                # Runtime
 	                container = container,
@@ -104,22 +102,13 @@ workflow pipeGenotypes {
 			String gdb_vcf_index = gdb_vcf + ".tbi"
 
 			## Split multi-allelic rows
-		    call processVCFs.splitMultiAllelics as splitMultiAllelics {
+		    call processVCFs.splitVariants as splitIntoSNPsAndINDELs {
 		        input:
 		            ref = ref,
 		            ref_dict = ref_dict,
 		            ref_fai = ref_fai,
 		            input_vcf = gdb_vcf,
 		            input_vcf_index = gdb_vcf_index,
-		            container = container,
-		    }
-
-		    ## Split into SNPs and INDELs
-		    call processVCFs.splitVCFs as splitVCFs {
-		        input:      
-		            input_vcf = splitMultiAllelics.output_vcf,
-		            input_vcf_index = splitMultiAllelics.output_vcf_index,
-		            # Runtime
 		            container = container,
 		    }
 
@@ -131,8 +120,8 @@ workflow pipeGenotypes {
 			        	ref = ref,
 			        	ref_dict = ref_dict,
 			        	ref_fai = ref_fai,
-			            input_vcf = gdb_vcf,
-			            input_vcf_index = gdb_vcf_index,
+			            input_vcf = splitIntoSNPsAndINDELs.output_SNPs,
+			            input_vcf_index = splitIntoSNPsAndINDELs.output_SNPs_index,
 			            makeSitesOnly = pipe_hard_filtered_SNPs_sites_only,
 			            type = "SNPs",
 			            filters = "-filter 'QD < 2.0' --filter-name 'QD2' -filter 'QUAL < 30.0' --filter-name 'QUAL30' -filter 'SOR > 3.0' --filter-name 'SOR3' -filter 'FS > 60.0' --filter-name 'FS60' -filter 'MQ < 40.0' --filter-name 'MQ40' -filter 'MQRankSum < -12.5' --filter-name 'MQRankSum-12.5' -filter 'ReadPosRankSum < -8.0' --filter-name 'ReadPosRankSum-8'",
@@ -150,8 +139,8 @@ workflow pipeGenotypes {
 			        	ref = ref,
 			        	ref_dict = ref_dict,
 			        	ref_fai = ref_fai,
-			            input_vcf = gdb_vcf,
-			            input_vcf_index = gdb_vcf_index,
+			            input_vcf = splitIntoSNPsAndINDELs.output_INDELs,
+			            input_vcf_index = splitIntoSNPsAndINDELs.output_INDELs_index,
 						makeSitesOnly = pipe_hard_filtered_INDELs_sites_only,
 						type = "INDELs",
 			            filters = "-filter 'QD < 2.0' --filter-name 'QD2' -filter 'QUAL < 30.0' --filter-name 'QUAL30' -filter 'FS > 200.0' --filter-name 'FS200' -filter 'ReadPosRankSum < -20.0' --filter-name 'ReadPosRankSum-20'",
