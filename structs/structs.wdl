@@ -43,9 +43,12 @@ struct bamInfo {
 
 struct haplotypeInfo {
     String groupName
-    String title_gvcf
     String gvcf
-    String gvcf_index
+}
+
+struct polymorphicRegionsInfo {
+    String scatterName
+    String intervalList
 }
 
 struct genotypeInfo {
