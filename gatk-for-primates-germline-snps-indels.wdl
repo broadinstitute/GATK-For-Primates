@@ -11,10 +11,10 @@ version 1.0
 ## documentation at: https://github.com/broadinstitute/GATK-For-Primates
 ##
 ## Software version requirements :
-## - Cromwell 63
-## - bwa 0.7.15 (note from GITC)
-## - Samtools 1.11 (note from GITC)
-## - GATK 4.2.0.0 (note that GATK 4.1.8.0 is used in GITC)
+## - Cromwell 65
+## - bwa 0.7.15 (note: from GITC)
+## - Samtools 1.11 (note: from GITC)
+## - GATK 4.2.0.0 (note: GATK 4.1.8.0 is used in GITC)
 ## - Python 3.9.5
 ##
 ## Program versions can be changed by defining alternative containers.
@@ -27,17 +27,18 @@ version 1.0
 ## authorized to run all programs before running this script. Please see the docker
 ## containers for detailed licensing information pertaining to the included programs.
 
-import "./structs/structs.wdl"
-import "./workflows/ValidateUserInputs.wdl" as preflight
-import "./workflows/UnmappedInputToAlignedBAM.wdl" as mapToBam
-import "./tasks/Utilities.wdl" as utilities
-import "./tasks/HaplotypesToGenotypes.wdl" as bamToVcf
-import "./workflows/PipeGenotypes.wdl" as pipeGenotypes
-import "./tasks/ProcessVCFs.wdl" as processVCFs
-import "./workflows/VariantRecalibration.wdl" as variantRecalibration
-import "./workflows/VariantRecalibrationPartial.wdl" as partialVariantRecalibration
-import "./workflows/BaseRecalibration.wdl" as baseRecalibration
-import "./workflows/functions/CollectByKey.wdl" as collectByKey
+import "structs/structs.wdl"
+import "workflows/ValidateUserInputs.wdl" as preflight
+import "workflows/UnmappedInputToAlignedBAM.wdl" as mapReads
+import "tasks/Utilities.wdl" as utilities
+import "tasks/HaplotypesToGenotypes.wdl" as bamToVcf
+import "workflows/PipeGenotypes.wdl" as pipeGenotypes
+import "tasks/ProcessVCFs.wdl" as processVCFs
+import "workflows/VariantFiltration.wdl" as variantFiltration
+import "workflows/VariantRecalibration.wdl" as variantRecalibration
+import "workflows/VariantRecalibrationPartial.wdl" as partialVariantRecalibration
+import "workflows/BaseRecalibration.wdl" as baseRecalibration
+import "workflows/functions/CollectByKey.wdl" as collectByKey
 
 ##########################################################################
 ## WORKFLOW DEFINITION
@@ -45,7 +46,7 @@ import "./workflows/functions/CollectByKey.wdl" as collectByKey
 
 workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
 
-    String pipeline_version = "pre-alpha"
+    String pipeline_version = "alpha"
 
     ##########################################################################
     ## DEFINE WORFKLOW INPUTS
@@ -53,17 +54,17 @@ workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
 
     input {
 
-        ## Collect workflow mode from JSON
+        ## Collect workflow mode from input JSON
         String mode # options: initial / repeat / final
  
-        ## Collect optional variables from JSON
-        Boolean validate_reference_vcf = false # options: true / false; if true will perform ValidateVariants on reference in 'Initial' mode only
-        Boolean validate_truth_sets = false # options: true / false; if true will force ValidateVariants on truth sets in 'Repeat' and 'Final' modes
+        ## Collect optional variables from input JSON
+        Boolean validate_truth_sets = true # options: true / false; if false this will disable running ValidateVariants on truth sets in 'Final' mode
+        Boolean flowcell_patterned = true # options: true / false; this influences pixel distance when marking duplicates
+        Int? merge_contigs_into_num_partitions # options: optional parameter for GenomicsDBImport
         Boolean bwamem2 = false # options: true / false; indicating bwa (as bwa mem) or bwamem2 (as bwamem2 mem) ***-Coming-Soon-***
-        Boolean flowcell_patterned = false # options: true / false; this influences pixel distance when marking duplicates
-        Int? merge_contigs_into_num_partitions # options: optional parameter for GenomicsDBImport ***-Coming-Soon-***
+        Boolean cram_not_bam = true # options: true / false; if false this will disable use of CRAM instead of BAM format
 
-        ## Collect reference files from JSON
+        ## Collect reference files from input JSON
         File ref
         File ref_dict
         File ref_fai
@@ -75,7 +76,10 @@ workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
         File? ref_0123
         File? ref_bwt_2bit_64
 
-        ## Collect truth sets from JSON
+        ## Collect .tar.gz of packaged interval lists from 'initial' mode
+        File? packaged_polymorphic_regions
+
+        ## Collect truth sets from input JSON
         File? truth_set_SNPs # options: optional SNP truth set (sites-only VCF file) for VQSR (training set is produced via hard filtering)
         File? truth_set_SNPs_index # index for the above
         File? truth_set_INDELs # options: optional INDEL truth set (sites-only VCF file) for VQSR (training set is produced via hard filtering)
@@ -85,7 +89,7 @@ workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
         Array[sampleInfo]+ sampleList
         Array[scatterInfo]+ scatterList
         
-        ## Define containers and paths
+        ## Define containers
         String container_gatk = "broadinstitute/gatk:4.2.0.0"
         String container_gitc = "us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.5.7-2021-06-09_16-47-48Z"
         String container_python = "python:3.9.5"
@@ -104,6 +108,7 @@ workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
     Array[File?]+ ref_idxs = if bwamem2 then [ref_amb, ref_ann, ref_pac, ref_0123, ref_bwt_2bit_64] else [ref_amb, ref_ann, ref_pac, ref_bwt, ref_sa]
     ## Set mode Booleans as true or false
     Boolean mode_is_initial = mode == "initial"
+    Boolean mode_is_repeat = mode == "repeat"
     Boolean mode_is_final = mode == "final"
     ## Set Booleans determining which genotype files should be built and piped downstream
     Boolean pipe_unfiltered = if (defined(truth_set_INDELs)) || (defined(truth_set_SNPs)) && (mode_is_final) then true else false
@@ -128,13 +133,14 @@ workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
             truth_set_SNPs_index = truth_set_SNPs_index,
             truth_set_INDELs = truth_set_INDELs,
             truth_set_INDELs_index = truth_set_INDELs_index,
-            mode_is_initial = mode_is_initial,
-            validate_reference_vcf = validate_reference_vcf,
-            validate_truth_sets = validate_truth_sets,
+            mode = mode,
+            packaged_polymorphic_regions = packaged_polymorphic_regions,
             ## Runtime
             container_gatk = container_gatk,
             container_python = container_python,
     }
+
+    Array[polymorphicRegionsInfo]+ polymorphicRegionsList = read_json(validateUserInputs.polymorphic_regions_json)
 
     ####################################################################
     ## IF MODE == INITIAL: Map either paired FASTQ or uBAM to BAM
@@ -142,7 +148,7 @@ workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
     
     if (mode_is_initial) {
 
-        call mapToBam.unmappedInputToAlignedBAM as mapReads {
+        call mapReads.unmappedInputToAlignedBAM as mapReads {
             input:
                 ref = ref,
                 ref_dict = ref_dict,
@@ -151,6 +157,7 @@ workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
                 sampleList = sampleList,
                 flowcell_patterned = flowcell_patterned,
                 bwamem2 = bwamem2,
+                cram_not_bam = cram_not_bam,
                 ## Runtime
                 container_gatk = container_gatk,
                 container_gitc = container_gitc,
@@ -178,98 +185,132 @@ workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
     Array[bamInfo]+ bamList = read_json(bamJSON.file)
 
     ####################################################################
-    ## Perform germline joint-variant discovery
+    ## IF MODE == INITIAL: Call variants across user-defined scatters
     ####################################################################
 
-    ## Scatter over each user-defined scatter interval
-    scatter (scttr in scatterList) {
+    if (mode_is_initial) { 
 
-        ## Scatter over each BAM file
-        scatter (bamFile in bamList) {
+        ## Scatter over each user-defined scatter interval
+        scatter (scttr in scatterList) {
 
-            ## Call haplotypes (i.e. per BAM, per scatter)
-            call bamToVcf.haplotypeCaller as haplotypeCaller {
+            ## Scatter over each BAM file
+            scatter (bamFile in bamList) {
+
+                ## Perform initial round of variant calling
+                call bamToVcf.haplotypeCallerVCF as haplotypeCallerVCF {
+                    input:
+                        ref = ref,
+                        ref_dict = ref_dict,
+                        ref_fai = ref_fai,
+                        input_bam = bamFile.bam,
+                        input_bam_index = bamFile.bam_index,
+                        sampleGroup = bamFile.sampleGroup,
+                        sampleName = bamFile.sampleName,
+                        scatterName = scttr.name,
+                        scatterIntervals = sub(scttr.intervals, " ", " -L "),
+                        # Runtime
+                        container = container_gatk,
+                }
+
+                ## Split, hard filter and make sites only high-confidence SNPs and INDELs only
+                call variantFiltration.variantFiltration as filterInitialVariants {
+                    input:
+                        ref = ref,
+                        ref_dict = ref_dict,
+                        ref_fai = ref_fai,
+                        input_vcf = haplotypeCallerVCF.output_vcf,
+                        input_vcf_index = haplotypeCallerVCF.output_vcf_index,
+                        # Runtime
+                        container = container_gatk,
+                }
+
+                ## Make unfiltered haplotypes to sites only
+                call processVCFs.makeSitesOnly as makeSitesOnlyInitialVariants {
+                    input:
+                        groupName = "unfiltered",
+                        input_vcf = haplotypeCallerVCF.output_vcf,
+                        input_vcf_index = haplotypeCallerVCF.output_vcf_index,
+                        # Runtime
+                        container = container_gatk,
+                } 
+
+            }
+
+            ## Produce and pre-process interval lists for high-confidence regions per scatter
+            call processVCFs.polymorphicSitesToRegions as polymorphicSitesToRegions {
                 input:
                     ref = ref,
                     ref_dict = ref_dict,
                     ref_fai = ref_fai,
-                    input_bam = bamFile.bam,
-                    input_bam_index = bamFile.bam_index,
-                    sampleGroup = bamFile.sampleGroup,
-                    title_gvcf = bamFile.sampleName + "_haplotypes_" + scttr.name,
-                    scatterIntervals = sub(scttr.intervals, " ", " -L "),
+                    scatterName = scttr.name,
+                    input_vcf_array = select_all(makeSitesOnlyInitialVariants.output_vcf),
+                    input_vcf_index_array = select_all(makeSitesOnlyInitialVariants.output_vcf_index),
                     # Runtime
                     container = container_gatk,
             }
 
         }
 
-        ## Generate haplotype JSON, comprising 'Cohort' if multiple taxa
-        call utilities.generateHaplotypeJSON as haplotypeJSON {
+        ## Generate JSON of polymorphic regions across scatters
+        call utilities.packagePolymorphicRegions as packagePolymorphicRegions {
             input:
-                sampleGroups = haplotypeCaller.output_sampleGroup,
-                title_gvcfs = haplotypeCaller.output_title_gvcf,
-                gvcfs = haplotypeCaller.output_gvcf,
-                gvcf_indexes = haplotypeCaller.output_gvcf_index,
-                multiple_taxonomic_groups = validateUserInputs.multiple_taxonomic_groups, 
+                scatterNames = select_all(polymorphicSitesToRegions.output_scatterName),
+                intervalLists = select_all(polymorphicSitesToRegions.output_intervalList),
+                intervalListFilenames = select_all(polymorphicSitesToRegions.output_intervalList_filename),
                 # Runtime
                 container = container_python,
         }
 
-        ## Read haplotypeJSON as a haplotypeInfo struct and coerce into arrays
-        Array[haplotypeInfo]+ haplotypeList = read_json(haplotypeJSON.file)
-        scatter (haplos in haplotypeList) {
-            String haplotype_groupNames = haplos.groupName
-            String haplotype_gvcfs = haplos.gvcf
-        }
+    }
 
-        ## Scatter over each group, collecting haplotype gVCF files for each
-        ## WDL 1.1: scatter (pair in as_pairs(collect_by_key(zip(select_all(haplotype_groupNames),select_all(haplotype_gvcfs))))) {
-        ## Code below for WDL 1.0:
-        call collectByKey.collectByKey as collectHaplotypesByGroup {
-            input:
-                allGroups = validateUserInputs.groupNames,
-                groups = select_all(haplotype_groupNames),
-                members = select_all(haplotype_gvcfs),
-        }
 
-        scatter (pair in collectHaplotypesByGroup.collected) {
+    ####################################################################
+    ## IF MODE == REPEAT: Call variants across polymorphic regions
+    ####################################################################
 
-            ## Restore in WDL 1.1
-            #scatter (each_haplotype_gvcf in pair.right) {
-            #    String each_haplotype_gvcf_index = each_haplotype_gvcf + ".tbi"
-            #}
+    if (mode_is_repeat) { 
 
-            scatter (each_haplotype_gvcf in pair.right) {
-                String each_haplotype_gvcf_index = each_haplotype_gvcf + ".tbi"
-            }
-            
-            ## Import haplotypes to GenomicsDBs
-            call bamToVcf.genomicsDBImport as genomicsDBImport {
-                input:
-                    input_gvcfs = pair.right,
-                    input_gvcfs_indexes = each_haplotype_gvcf_index,
-                    title_gdb = "gdb_" + pair.left + "_" + scttr.name,
-                    scatterIntervals = scttr.intervals,
-                    merge_contigs_into_num_partitions = merge_contigs_into_num_partitions,
-                    # Runtime
-                    container = container_gatk,
+        ## Scatter over each user-defined scatter interval
+        scatter (scttrPoly in polymorphicRegionsList) {
+
+            ## Fetch the correct interval list file for this scatter from the glob
+            scatter (listLocation in validateUserInputs.polymorphicRegionsIntervalLists) {
+                if (basename(listLocation) == scttrPoly.intervalList) {
+                    String? listToUse = listLocation
+                }
             }
 
-            ## Genotype each database
-            call bamToVcf.genotypeGenomicsDB as genotypeGenomicsDB {
-                input:
-                    ref = ref,
-                    ref_dict = ref_dict,
-                    ref_fai = ref_fai,
-                    input_genomicsdb = genomicsDBImport.output_genomicsdb,
-                    input_genomicsdb_title = genomicsDBImport.output_genomicsdb_title,
-                    output_vcf_title = "variant_calls_" + pair.left + "_" + scttr.name + "_genotyped",
-                    groupName = pair.left,
-                    scatterName = scttr.name,
-                    scatterIntervals = scttr.intervals,
-                    # Runtime
-                    container = container_gatk,
+            ## Scatter over each BAM file
+            scatter (bamFile in bamList) {
+
+                ## Perform initial round of variant calling
+                call bamToVcf.haplotypeCallerVCF as repeatHaplotypeCallerVCF {
+                    input:
+                        ref = ref,
+                        ref_dict = ref_dict,
+                        ref_fai = ref_fai,
+                        input_bam = bamFile.bam,
+                        input_bam_index = bamFile.bam_index,
+                        sampleGroup = bamFile.sampleGroup,
+                        sampleName = bamFile.sampleName,
+                        scatterName = scttrPoly.scatterName,
+                        scatterIntervalList = select_first(listToUse),
+                        # Runtime
+                        container = container_gatk,
+                }
+
+                ## Split, hard filter and make sites only high-confidence SNPs and INDELs
+                call variantFiltration.variantFiltration as filterRepeatVariants {
+                    input:
+                        ref = ref,
+                        ref_dict = ref_dict,
+                        ref_fai = ref_fai,
+                        input_vcf = repeatHaplotypeCallerVCF.output_vcf,
+                        input_vcf_index = repeatHaplotypeCallerVCF.output_vcf_index,
+                        # Runtime
+                        container = container_gatk,
+                }
+
             }
 
         }
@@ -277,71 +318,33 @@ workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
     }
 
     ####################################################################
-    ## Produce and pipe the variants that are needed downstream
-    ####################################################################
+    ## IF MODE == INITIAL/REPEAT: Recalibrate BAM files
+    ####################################################################    
 
-    ## Scatter over each group, collecting genotype VCF files for each
-    ## WDL 1.1: scatter (pair in as_pairs(collect_by_key(zip(select_all(flatten(genotypeGenomicsDB.output_groupName)),select_all(flatten(genotypeGenomicsDB.output_genotypes_vcf)))))) {
-    ## Code below for WDL 1.0:
-    call collectByKey.collectByKey as collectGenotypesByGroup {
-        input:
-            allGroups = validateUserInputs.groupNames,
-            groups = select_all(flatten(genotypeGenomicsDB.output_groupName)),
-            members = select_all(flatten(genotypeGenomicsDB.output_genotypes_vcf)),
-    }
-    Array[Pair[String,Array[String]]] collectedGenotypesByGroup = collectGenotypesByGroup.collected
-    
-    scatter (pair in collectedGenotypesByGroup) {
+    if (mode_is_initial || mode_is_repeat) {
 
-        call pipeGenotypes.pipeGenotypes as pipe {
+            Array[Array[File]] BQSR_SNP_sites_array = select_first([filterInitialVariants.SNP_sites_vcf,filterRepeatVariants.SNP_sites_vcf])
+            Array[Array[File]] BQSR_SNP_sites_index_array = select_first([filterInitialVariants.SNP_sites_vcf_index,filterRepeatVariants.SNP_sites_vcf_index])
+            Array[Array[File]] BQSR_INDEL_sites_array = select_first([filterInitialVariants.INDEL_sites_vcf,filterRepeatVariants.INDEL_sites_vcf])
+            Array[Array[File]] BQSR_INDEL_sites_index_array = select_first([filterInitialVariants.INDEL_sites_vcf_index,filterRepeatVariants.INDEL_sites_vcf_index])
+
+        ## Merge all filtered variants from all samples within scatter
+        call processVCFs.mergeManyVCFs as mergeSitesForBQSR {
             input:
-                ref = ref,
                 ref_dict = ref_dict,
-                ref_fai = ref_fai,
-                gdb_groupName = pair.left,
-                gdb_vcfs = pair.right,
-                pipe_unfiltered = pipe_unfiltered,
-                pipe_unfiltered_sites_only = pipe_unfiltered_sites_only,
-                pipe_hard_filtered_SNPs = pipe_hard_filtered_SNPs,
-                pipe_hard_filtered_INDELs = pipe_hard_filtered_INDELs,
-                pipe_hard_filtered_SNPs_sites_only = pipe_hard_filtered_SNPs_sites_only,
-                pipe_hard_filtered_INDELs_sites_only = pipe_hard_filtered_INDELs_sites_only,
+                input_array_1_vcf = flatten(BQSR_SNP_sites_array),
+                input_array_1_vcf_index = flatten(BQSR_SNP_sites_index_array),
+                input_array_2_vcf = flatten(BQSR_INDEL_sites_array),
+                input_array_2_vcf_index = flatten(BQSR_INDEL_sites_index_array),
+                output_vcf_title = "high_confidence_sites_for_BQSR",
                 # Runtime
-                container = container_gatk,
+                container = container_gatk
         }
-
-    }
-
-    call utilities.generateGenotypeJSON as genotypeJSON {
-        input:
-            groupName = pipe.groupName,
-            loc_unfiltered_vcf = pipe.loc_unfiltered_vcf,
-            loc_unfiltered_vcf_index  = pipe.loc_unfiltered_vcf_index,
-            loc_unfiltered_sites_only_vcf = pipe.loc_unfiltered_sites_only_vcf,
-            loc_unfiltered_sites_only_vcf_index = pipe.loc_unfiltered_sites_only_vcf_index,
-            loc_hard_filtered_SNPs_vcf = pipe.loc_hard_filtered_SNPs_vcf,
-            loc_hard_filtered_SNPs_vcf_index = pipe.loc_hard_filtered_SNPs_vcf_index,
-            loc_hard_filtered_INDELs_vcf = pipe.loc_hard_filtered_INDELs_vcf,
-            loc_hard_filtered_INDELs_vcf_index = pipe.loc_hard_filtered_INDELs_vcf_index,
-            loc_hard_filtered_SNPs_sites_only_vcf = pipe.loc_hard_filtered_SNPs_sites_only_vcf,
-            loc_hard_filtered_SNPs_sites_only_vcf_index = pipe.loc_hard_filtered_SNPs_sites_only_vcf_index,
-            loc_hard_filtered_INDELs_sites_only_vcf = pipe.loc_hard_filtered_INDELs_sites_only_vcf,
-            loc_hard_filtered_INDELs_sites_only_vcf_index = pipe.loc_hard_filtered_INDELs_sites_only_vcf_index,
-            # Runtime
-            container = container_python,
-    }
-
-    Array[genotypeInfo]+ genotypeList = read_json(genotypeJSON.file)
-
-    ####################################################################
-    ## IF MODE == INITIAL/REPEAT: PERFORM BASE RECALIBRATION
-    ####################################################################
-
-    if (mode_is_initial || !mode_is_final) {    
 
         ## Scatter over each input BAM file to recalibrate
         scatter (bamFile in bamList) {
 
+            ## Perform and apply base recalibration
             call baseRecalibration.BQSR as BQSR {
                 input:
                     ref = ref,
@@ -349,10 +352,9 @@ workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
                     ref_fai = ref_fai,
                     input_bam = bamFile.bam,
                     input_bam_index = bamFile.bam_index,
-                    input_SNP_sites = select_all(pipe.hard_filtered_SNPs_sites_only_vcf),
-                    input_SNP_sites_indexes = select_all(pipe.hard_filtered_SNPs_sites_only_vcf_index),
-                    input_INDEL_sites = select_all(pipe.hard_filtered_INDELs_sites_only_vcf),
-                    input_INDEL_sites_indexes = select_all(pipe.hard_filtered_INDELs_sites_only_vcf_index),
+                    cram_not_bam = cram_not_bam,
+                    high_confidence_sites_vcf = mergeSitesForBQSR.output_merged_vcf,
+                    high_confidence_sites_vcf_index = mergeSitesForBQSR.output_merged_vcf_index,
                     sampleName = bamFile.sampleName,
                     container_gatk = container_gatk,
                     container_gitc = container_gitc,
@@ -363,239 +365,374 @@ workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
 
     }
 
-    ## Workflow is now complete if mode is initial or repeat
-
-
     ####################################################################
-    ## IF MODE = FINAL: Cannot VQSR; make list of master loci by merging
-    ## all sites-only hard-filtered SNPs and INDELs from each group
+    ## IF MODE == FINAL: 
+    ####################################################################
+    ## Call haplotypes and perform joint genotyping per taxon
     ####################################################################
 
-    if ((!defined(truth_set_INDELs)) && (!defined(truth_set_SNPs)) && (mode_is_final)) {
+    if (mode_is_final) { 
 
-        call processVCFs.mergeManyVCFs as mergeMasterLocifromHF {
-            input:
-                input_array_1_vcf = select_all(pipe.hard_filtered_SNPs_sites_only_vcf),
-                input_array_1_vcf_index = select_all(pipe.hard_filtered_SNPs_sites_only_vcf_index),
-                input_array_2_vcf = select_all(pipe.hard_filtered_INDELs_sites_only_vcf),
-                input_array_2_vcf_index = select_all(pipe.hard_filtered_INDELs_sites_only_vcf_index),
-                ref_dict = ref_dict,
-                output_vcf_title = "mergeINDELsFromVQSRwithHardFilteredSNPs",
-                # Runtime
-                container = container_gatk,
-        }
-        
-    }
+        ## Scatter over each scatter and polymorphic region
+        scatter (scttr in polymorphicRegionsList) {
 
-
-    ####################################################################
-    ## IF MODE = FINAL: Can VQSR; proceed either fully or partially
-    ####################################################################
-
-    ## If mode is final and at least one truth set is available
-    if ((defined(truth_set_INDELs)) || (defined(truth_set_SNPs)) && (mode_is_final)) {
-
-        ## Scatter over the available genotype sets per group
-        scatter (genotypeFile in genotypeList) {
-
-            ## If both truth sets are available, recalibrate each in series
-            if (defined(truth_set_SNPs) && defined(truth_set_INDELs)) {
-                call variantRecalibration.VQSR as VQSR {
-                    input:
-                        ref = ref,
-                        ref_dict = ref_dict,
-                        ref_fai = ref_fai,
-                        groupName = genotypeFile.groupName,
-                        unfiltered_vcf = genotypeFile.unfiltered_vcf,
-                        unfiltered_vcf_index = genotypeFile.unfiltered_vcf_index,
-                        unfiltered_vcf_sites_only = genotypeFile.unfiltered_sites_only_vcf,
-                        unfiltered_vcf_sites_only_index = genotypeFile.unfiltered_sites_only_vcf_index,
-                        truth_set_INDELs = truth_set_INDELs,
-                        truth_set_INDELs_index = truth_set_INDELs_index,
-                        truth_set_SNPs = truth_set_SNPs,
-                        truth_set_SNPs_index = truth_set_SNPs_index,
-                        training_set_INDELs = genotypeFile.hard_filtered_INDELs_sites_only_vcf,
-                        training_set_INDELs_index = genotypeFile.hard_filtered_INDELs_sites_only_vcf_index,
-                        training_set_SNPs = genotypeFile.hard_filtered_SNPs_sites_only_vcf,
-                        training_set_SNPs_index = genotypeFile.hard_filtered_SNPs_sites_only_vcf_index,
-                        container = container_gatk,
-                    }
-            }
-
-            ## If only one is available, perform partial recalibration combined with hard filtering
-            if (!defined(truth_set_SNPs) || !defined(truth_set_INDELs)) {
-                call partialVariantRecalibration.partialVQSR as partialVQSR {
-                    input:
-                        ref = ref,
-                        ref_dict = ref_dict,
-                        ref_fai = ref_fai,
-                        groupName = genotypeFile.groupName,
-                        unfiltered_vcf = genotypeFile.unfiltered_vcf,
-                        unfiltered_vcf_index = genotypeFile.unfiltered_vcf_index,
-                        unfiltered_vcf_sites_only = genotypeFile.unfiltered_sites_only_vcf,
-                        unfiltered_vcf_sites_only_index = genotypeFile.unfiltered_sites_only_vcf_index,
-                        type = if defined(truth_set_SNPs) && !defined(truth_set_INDELs) then "SNP" else "INDEL",
-                        truth_set = if defined(truth_set_SNPs) && !defined(truth_set_INDELs) then truth_set_SNPs else truth_set_INDELs,
-                        truth_set_index = if defined(truth_set_SNPs) && !defined(truth_set_INDELs) then truth_set_SNPs_index else truth_set_INDELs_index,
-                        training_set = if defined(truth_set_SNPs) && !defined(truth_set_INDELs) then genotypeFile.hard_filtered_SNPs_sites_only_vcf else genotypeFile.hard_filtered_INDELs_sites_only_vcf,
-                        training_set_index = if defined(truth_set_SNPs) && !defined(truth_set_INDELs) then genotypeFile.hard_filtered_SNPs_sites_only_vcf_index else genotypeFile.hard_filtered_INDELs_sites_only_vcf_index,
-                        container = container_gatk,
-                    }
-            }
-
-        } ## Stop scattering over genotype sets per group
-        
-        ## If only one is available, merge the partially VQSR-filtered variants from all groups with the opposite hard-filtered variants from all groups
-        if (!defined(truth_set_SNPs) || !defined(truth_set_INDELs)) {
-
-            ## VQSR'd INDELs, hard-filtered SNPs
-            if (!defined(truth_set_SNPs) && defined(truth_set_INDELs)) {
-                call processVCFs.mergeManyVCFs as mergeINDELsFromVQSRwithHardFilteredSNPs {
-                    input:
-                        input_array_1_vcf = select_all(partialVQSR.output_vcf),
-                        input_array_1_vcf_index = select_all(partialVQSR.output_vcf_index),
-                        input_array_2_vcf = select_all(pipe.hard_filtered_SNPs_sites_only_vcf),
-                        input_array_2_vcf_index = select_all(pipe.hard_filtered_SNPs_sites_only_vcf_index),
-                        ref_dict = ref_dict,
-                        output_vcf_title = "mergeINDELsFromVQSRwithHardFilteredSNPs",
-                        # Runtime
-                        container = container_gatk,
-                }              
-            }
-            ## VQSR'd SNPs, hard-filtered INDELs
-            if (defined(truth_set_SNPs) && !defined(truth_set_INDELs)) {
-                call processVCFs.mergeManyVCFs as mergeSNPsFromVQSRwithHardFilteredINDELs {
-                    input:
-                        input_array_1_vcf = select_all(partialVQSR.output_vcf),
-                        input_array_1_vcf_index = select_all(partialVQSR.output_vcf_index),
-                        input_array_2_vcf = select_all(pipe.hard_filtered_INDELs_sites_only_vcf),
-                        input_array_2_vcf_index = select_all(pipe.hard_filtered_INDELs_sites_only_vcf_index),
-                        ref_dict = ref_dict,
-                        output_vcf_title = "mergeSNPsFromVQSRwithHardFilteredINDELs",
-                        # Runtime
-                        container = container_gatk,
+            ## Fetch the correct interval list file for this scatter from the glob
+            scatter (listLocation in validateUserInputs.polymorphicRegionsIntervalLists) {
+                if (basename(listLocation) == scttr.intervalList) {
+                    String? listToUse_final = listLocation
                 }
             }
-
-        }
-
-        ## If both are available, merge the fully VQSR-filtered variants from all groups
-        if (defined(truth_set_SNPs) && defined(truth_set_INDELs)) {
-
-            # Merge variants into master loci
-            call processVCFs.mergeVCFs as mergeAllFromVQSR {
-                input:
-                    input_vcf_array = select_all(VQSR.output_vcf),
-                    input_vcf_index_array = select_all(VQSR.output_vcf_index),
-                    ref_dict = ref_dict,
-                    output_vcf_title = "mergeAllFromVQSR",
-                    # Runtime
-                    container = container_gatk,
-            }
-
-        }
-
-    }
-
-    ####################################################################
-    ## IF MODE = FINAL: Perform final round of variant calling
-    ####################################################################
-
-    if (mode_is_final) {
-
-        File masterLociVcf = select_first([mergeMasterLocifromHF.output_merged_vcf, mergeAllFromVQSR.output_merged_vcf, mergeINDELsFromVQSRwithHardFilteredSNPs.output_merged_vcf, mergeSNPsFromVQSRwithHardFilteredINDELs.output_merged_vcf])
-        File masterLociVcfIndex = select_first([mergeMasterLocifromHF.output_merged_vcf_index, mergeAllFromVQSR.output_merged_vcf_index, mergeINDELsFromVQSRwithHardFilteredSNPs.output_merged_vcf_index, mergeSNPsFromVQSRwithHardFilteredINDELs.output_merged_vcf_index])
-
-        ## Split masterLociVCF into interval lists for scattering
-
-        call processVCFs.splitIntervals as splitIntervals {
-            input:
-                ref = ref,
-                ref_dict = ref_dict,
-                ref_fai = ref_fai,
-                masterLociVcf = masterLociVcf,
-                masterLociVcfIndex = masterLociVcfIndex,
-                # Runtime
-                container = container_gatk,
-        }
-
-
-        ## Scatter over each user-defined scatter interval
-        scatter (intervalList in splitIntervals.interval_lists) {
 
             ## Scatter over each BAM file
             scatter (bamFile in bamList) {
 
                 ## Call haplotypes (i.e. per BAM, per scatter)
-                call bamToVcf.haplotypeCaller as haplotypeCallerFinal {
+                call bamToVcf.haplotypeCallerGVCF as haplotypeCallerGVCF {
                     input:
                         ref = ref,
                         ref_dict = ref_dict,
                         ref_fai = ref_fai,
                         input_bam = bamFile.bam,
                         input_bam_index = bamFile.bam_index,
-                        sampleGroup = "FinalCallset",
-                        title_gvcf = bamFile.sampleName + "_haplotypes_final_" + basename(intervalList),
-                        masterLociVcf = intervalList,
+                        sampleName = bamFile.sampleName,
+                        sampleGroup = bamFile.sampleGroup,
+                        scatterName = scttr.scatterName,
+                        intervalList = select_first(listToUse_final),
                         # Runtime
                         container = container_gatk,
                 }
 
             }
 
-            ## Import haplotypes to GenomicsDBs
-            call bamToVcf.genomicsDBImport as genomicsDBImportFinal {
+            ## Generate haplotype JSON per scatter, adding 'Cohort' group if multiple taxa
+            call utilities.generateHaplotypeJSON as haplotypeJSON {
                 input:
-                    input_gvcfs = haplotypeCallerFinal.output_gvcf,
-                    input_gvcfs_indexes = haplotypeCallerFinal.output_gvcf_index,
-                    title_gdb = "gdb_final_" + basename(intervalList),
-                    merge_contigs_into_num_partitions = merge_contigs_into_num_partitions,
-                    masterLociVcf = intervalList,
+                    sampleGroups = haplotypeCallerGVCF.output_sampleGroup,
+                    gvcfs = haplotypeCallerGVCF.output_gvcf,
+                    multiple_taxonomic_groups = validateUserInputs.multiple_taxonomic_groups,
                     # Runtime
-                    container = container_gatk,
+                    container = container_python,
             }
 
-            ## Genotype the final callset
-            call bamToVcf.genotypeGenomicsDB as genotypeGenomicsDBFinal {
+            ## Read haplotypeJSON as a haplotypeInfo struct and coerce into arrays
+            Array[haplotypeInfo]+ haplotypeList = read_json(haplotypeJSON.file)
+            scatter (haplos in haplotypeList) {
+                String haplotype_groupNames = haplos.groupName
+                String haplotype_gvcfs = haplos.gvcf
+            }
+
+            ## Scatter over each group, collecting haplotype gVCF files for each
+            ## WDL 1.1: scatter (pair in as_pairs(collect_by_key(zip(select_all(haplotype_groupNames),select_all(haplotype_gvcfs))))) {
+            call collectByKey.collectByKey as collectHaplotypesByGroup {
+                input:
+                    allGroups = validateUserInputs.groupNames,
+                    groups = select_all(haplotype_groupNames),
+                    members = select_all(haplotype_gvcfs),
+            }
+
+            scatter (pair in collectHaplotypesByGroup.collected) {
+
+                scatter (each_haplotype_gvcf in pair.right) {
+                    String haplotype_gvcf_indexes = each_haplotype_gvcf + ".tbi"
+                }
+                
+                ## Import haplotypes to GenomicsDBs
+                call bamToVcf.genomicsDBImport as genomicsDBImport {
+                    input:
+                        input_gvcfs = pair.right,
+                        input_gvcfs_indexes = haplotype_gvcf_indexes,
+                        sampleGroup = pair.left,
+                        scatterName = scttr.scatterName,
+                        intervalList = select_first(listToUse_final),
+                        merge_contigs_into_num_partitions = merge_contigs_into_num_partitions,
+                        # Runtime
+                        container = container_gatk,
+                }
+
+                ## Genotype each database across polymorphic regions
+                call bamToVcf.genotypeGenomicsDB as genotypeGenomicsDB {
+                    input:
+                        ref = ref,
+                        ref_dict = ref_dict,
+                        ref_fai = ref_fai,
+                        input_genomicsdb = genomicsDBImport.output_genomicsdb,
+                        input_genomicsdb_title = genomicsDBImport.output_genomicsdb_title,
+                        output_vcf_title = "variant_calls_" + pair.left + "_" + scttr.scatterName + "_genotyped",
+                        groupName = pair.left,
+                        scatterName = scttr.scatterName,
+                        intervalList = select_first(listToUse_final),
+                        regenotype = false,
+                        # Runtime
+                        container = container_gatk,
+                }
+
+            }
+
+        }
+
+        ####################################################################
+        ## Produce and pipe the variants that are needed downstream
+        ####################################################################
+
+        ## Scatter over each group, collecting genotype VCF files for each
+        ## WDL 1.1: scatter (pair in as_pairs(collect_by_key(zip(select_all(flatten(genotypeGenomicsDB.output_groupName)),select_all(flatten(genotypeGenomicsDB.output_genotypes_vcf)))))) {
+        call collectByKey.collectByKey as collectGenotypesByGroup {
+            input:
+                allGroups = validateUserInputs.groupNames,
+                groups = select_all(flatten(genotypeGenomicsDB.output_groupName)),
+                members = select_all(flatten(genotypeGenomicsDB.output_genotypes_vcf)),
+        }
+        Array[Pair[String,Array[String]]] collectedGenotypesByGroup = collectGenotypesByGroup.collected
+    
+        scatter (pair in collectedGenotypesByGroup) {
+
+            call pipeGenotypes.pipeGenotypes as pipe {
                 input:
                     ref = ref,
                     ref_dict = ref_dict,
                     ref_fai = ref_fai,
-                    input_genomicsdb = genomicsDBImportFinal.output_genomicsdb,
-                    input_genomicsdb_title = genomicsDBImportFinal.output_genomicsdb_title,
-                    output_vcf_title = "final_variant_calls_" + basename(intervalList) + "_genotyped",
-                    groupName = "FinalCallset",
-                    masterLociVcf = intervalList,
+                    gdb_groupName = pair.left,
+                    gdb_vcfs = pair.right,
+                    pipe_unfiltered = pipe_unfiltered,
+                    pipe_unfiltered_sites_only = pipe_unfiltered_sites_only,
+                    pipe_hard_filtered_SNPs = pipe_hard_filtered_SNPs,
+                    pipe_hard_filtered_INDELs = pipe_hard_filtered_INDELs,
+                    pipe_hard_filtered_SNPs_sites_only = pipe_hard_filtered_SNPs_sites_only,
+                    pipe_hard_filtered_INDELs_sites_only = pipe_hard_filtered_INDELs_sites_only,
                     # Runtime
                     container = container_gatk,
             }
 
         }
 
-        ## Gather the final callsets across scatters/interval lists
-        call processVCFs.gatherVCFs as gatherFinalCallset {
+        call utilities.generateGenotypeJSON as genotypeJSON {
             input:
-                input_vcfs = genotypeGenomicsDBFinal.output_genotypes_vcf,
-                input_vcfs_indexes = genotypeGenomicsDBFinal.output_genotypes_vcf_index,
-                output_vcf_title = "FinalCallset",
+                groupName = pipe.groupName,
+                loc_unfiltered_vcf = pipe.loc_unfiltered_vcf,
+                loc_unfiltered_vcf_index  = pipe.loc_unfiltered_vcf_index,
+                loc_unfiltered_sites_only_vcf = pipe.loc_unfiltered_sites_only_vcf,
+                loc_unfiltered_sites_only_vcf_index = pipe.loc_unfiltered_sites_only_vcf_index,
+                loc_hard_filtered_SNPs_vcf = pipe.loc_hard_filtered_SNPs_vcf,
+                loc_hard_filtered_SNPs_vcf_index = pipe.loc_hard_filtered_SNPs_vcf_index,
+                loc_hard_filtered_INDELs_vcf = pipe.loc_hard_filtered_INDELs_vcf,
+                loc_hard_filtered_INDELs_vcf_index = pipe.loc_hard_filtered_INDELs_vcf_index,
+                loc_hard_filtered_SNPs_sites_only_vcf = pipe.loc_hard_filtered_SNPs_sites_only_vcf,
+                loc_hard_filtered_SNPs_sites_only_vcf_index = pipe.loc_hard_filtered_SNPs_sites_only_vcf_index,
+                loc_hard_filtered_INDELs_sites_only_vcf = pipe.loc_hard_filtered_INDELs_sites_only_vcf,
+                loc_hard_filtered_INDELs_sites_only_vcf_index = pipe.loc_hard_filtered_INDELs_sites_only_vcf_index,
+                # Runtime
+                container = container_python,
+        }
+
+        Array[genotypeInfo]+ genotypeList = read_json(genotypeJSON.file)
+
+        ####################################################################
+        ## No truth sets available? Generate hard-filtered callset...
+        ####################################################################
+
+        if ((!defined(truth_set_INDELs)) && (!defined(truth_set_SNPs))) {
+
+            call processVCFs.mergeManyVCFs as generateHardFilteredCallset {
+                input:
+                    input_array_1_vcf = select_all(pipe.hard_filtered_SNPs_sites_only_vcf),
+                    input_array_1_vcf_index = select_all(pipe.hard_filtered_SNPs_sites_only_vcf_index),
+                    input_array_2_vcf = select_all(pipe.hard_filtered_INDELs_sites_only_vcf),
+                    input_array_2_vcf_index = select_all(pipe.hard_filtered_INDELs_sites_only_vcf_index),
+                    ref_dict = ref_dict,
+                    output_vcf_title = "hardFilteredCallset",
+                    # Runtime
+                    container = container_gatk,
+            }
+            
+        }
+
+        ####################################################################
+        ## One or both truth sets available? Proceed with VQSR...
+        ####################################################################
+
+        ## If mode is final and at least one truth set is available
+        if ((defined(truth_set_INDELs)) || (defined(truth_set_SNPs))) {
+
+            ## Scatter over the available genotype sets per group
+            scatter (genotypeFile in genotypeList) {
+
+                ## If both truth sets are available, recalibrate each in series
+                if (defined(truth_set_SNPs) && defined(truth_set_INDELs)) {
+                    call variantRecalibration.VQSR as VQSR {
+                        input:
+                            ref = ref,
+                            ref_dict = ref_dict,
+                            ref_fai = ref_fai,
+                            groupName = genotypeFile.groupName,
+                            unfiltered_vcf = genotypeFile.unfiltered_vcf,
+                            unfiltered_vcf_index = genotypeFile.unfiltered_vcf_index,
+                            unfiltered_vcf_sites_only = genotypeFile.unfiltered_sites_only_vcf,
+                            unfiltered_vcf_sites_only_index = genotypeFile.unfiltered_sites_only_vcf_index,
+                            truth_set_INDELs = truth_set_INDELs,
+                            truth_set_INDELs_index = truth_set_INDELs_index,
+                            truth_set_SNPs = truth_set_SNPs,
+                            truth_set_SNPs_index = truth_set_SNPs_index,
+                            training_set_INDELs = genotypeFile.hard_filtered_INDELs_sites_only_vcf,
+                            training_set_INDELs_index = genotypeFile.hard_filtered_INDELs_sites_only_vcf_index,
+                            training_set_SNPs = genotypeFile.hard_filtered_SNPs_sites_only_vcf,
+                            training_set_SNPs_index = genotypeFile.hard_filtered_SNPs_sites_only_vcf_index,
+                            container = container_gatk,
+                        }
+                }
+
+                ## If only one is available, perform partial recalibration combined with hard filtering
+                if (!defined(truth_set_SNPs) || !defined(truth_set_INDELs)) {
+                    call partialVariantRecalibration.partialVQSR as partialVQSR {
+                        input:
+                            ref = ref,
+                            ref_dict = ref_dict,
+                            ref_fai = ref_fai,
+                            groupName = genotypeFile.groupName,
+                            unfiltered_vcf = genotypeFile.unfiltered_vcf,
+                            unfiltered_vcf_index = genotypeFile.unfiltered_vcf_index,
+                            unfiltered_vcf_sites_only = genotypeFile.unfiltered_sites_only_vcf,
+                            unfiltered_vcf_sites_only_index = genotypeFile.unfiltered_sites_only_vcf_index,
+                            type = if defined(truth_set_SNPs) && !defined(truth_set_INDELs) then "SNP" else "INDEL",
+                            truth_set = if defined(truth_set_SNPs) && !defined(truth_set_INDELs) then truth_set_SNPs else truth_set_INDELs,
+                            truth_set_index = if defined(truth_set_SNPs) && !defined(truth_set_INDELs) then truth_set_SNPs_index else truth_set_INDELs_index,
+                            training_set = if defined(truth_set_SNPs) && !defined(truth_set_INDELs) then genotypeFile.hard_filtered_SNPs_sites_only_vcf else genotypeFile.hard_filtered_INDELs_sites_only_vcf,
+                            training_set_index = if defined(truth_set_SNPs) && !defined(truth_set_INDELs) then genotypeFile.hard_filtered_SNPs_sites_only_vcf_index else genotypeFile.hard_filtered_INDELs_sites_only_vcf_index,
+                            container = container_gatk,
+                        }
+                }
+
+            } ## Stop scattering over genotype sets per group
+            
+            ## If only one is available, merge the partially VQSR-filtered variants from all groups with the opposite hard-filtered variants from all groups
+            if (!defined(truth_set_SNPs) || !defined(truth_set_INDELs)) {
+
+                ## VQSR'd INDELs, hard-filtered SNPs
+                if (!defined(truth_set_SNPs) && defined(truth_set_INDELs)) {
+                    call processVCFs.mergeManyVCFs as mergeINDELsFromVQSRwithHardFilteredSNPs {
+                        input:
+                            input_array_1_vcf = select_all(partialVQSR.output_vcf),
+                            input_array_1_vcf_index = select_all(partialVQSR.output_vcf_index),
+                            input_array_2_vcf = select_all(pipe.hard_filtered_SNPs_sites_only_vcf),
+                            input_array_2_vcf_index = select_all(pipe.hard_filtered_SNPs_sites_only_vcf_index),
+                            ref_dict = ref_dict,
+                            output_vcf_title = "mergeINDELsFromVQSRwithHardFilteredSNPs",
+                            # Runtime
+                            container = container_gatk,
+                    }              
+                }
+                ## VQSR'd SNPs, hard-filtered INDELs
+                if (defined(truth_set_SNPs) && !defined(truth_set_INDELs)) {
+                    call processVCFs.mergeManyVCFs as mergeSNPsFromVQSRwithHardFilteredINDELs {
+                        input:
+                            input_array_1_vcf = select_all(partialVQSR.output_vcf),
+                            input_array_1_vcf_index = select_all(partialVQSR.output_vcf_index),
+                            input_array_2_vcf = select_all(pipe.hard_filtered_INDELs_sites_only_vcf),
+                            input_array_2_vcf_index = select_all(pipe.hard_filtered_INDELs_sites_only_vcf_index),
+                            ref_dict = ref_dict,
+                            output_vcf_title = "mergeSNPsFromVQSRwithHardFilteredINDELs",
+                            # Runtime
+                            container = container_gatk,
+                    }
+                }
+
+            }
+
+            ## If both are available, merge the fully VQSR-filtered variants from all groups
+            if (defined(truth_set_SNPs) && defined(truth_set_INDELs)) {
+
+                # Merge variants into final loci callset
+                call processVCFs.mergeVCFs as mergeAllFromVQSR {
+                    input:
+                        input_vcf_array = select_all(VQSR.output_vcf),
+                        input_vcf_index_array = select_all(VQSR.output_vcf_index),
+                        ref_dict = ref_dict,
+                        output_vcf_title = "mergeAllFromVQSR",
+                        # Runtime
+                        container = container_gatk,
+                }
+
+            }
+
+        }
+
+        ####################################################################
+        ## Re-genotype all samples at all loci
+        ####################################################################
+
+        ## Collect groupName as pair.left and genomicsDB as pair.right
+        call collectByKey.collectByKey as collectGenomicsDBsByGroup {
+            input:
+                allGroups = validateUserInputs.groupNames,
+                groups = select_all(flatten(genomicsDBImport.output_groupName)),
+                members = select_all(flatten(genomicsDBImport.output_genomicsdb)),
+        }
+
+        if (validateUserInputs.multiple_taxonomic_groups) {
+            String group_to_collect_mult = "Cohort"
+        }
+
+        if (!validateUserInputs.multiple_taxonomic_groups) {
+            String group_to_collect_non_mult = select_first(flatten(genomicsDBImport.output_groupName))
+        }
+
+        String group_to_collect = select_first([group_to_collect_mult,group_to_collect_non_mult])
+
+        scatter (pair in collectGenomicsDBsByGroup.collected) {
+            if (pair.left == group_to_collect) {
+                scatter (each_gdb in pair.right) {
+                    # Genotype each database across polymorphic regions
+                    call bamToVcf.genotypeGenomicsDB as genotypeGenomicsDBFinal {
+                        input:
+                            ref = ref,
+                            ref_dict = ref_dict,
+                            ref_fai = ref_fai,
+                            input_genomicsdb = each_gdb,
+                            input_genomicsdb_title = "FinalCallset",
+                            output_vcf_title = "final_calls_" + basename(each_gdb),
+                            groupName = group_to_collect,
+                            scatterName = "FinalCallset",
+                            intervalList = select_first([generateHardFilteredCallset.output_merged_vcf,mergeINDELsFromVQSRwithHardFilteredSNPs.output_merged_vcf,mergeSNPsFromVQSRwithHardFilteredINDELs.output_merged_vcf,mergeAllFromVQSR.output_merged_vcf]),
+                            finalCallsetIndex = select_first([generateHardFilteredCallset.output_merged_vcf_index,mergeINDELsFromVQSRwithHardFilteredSNPs.output_merged_vcf_index,mergeSNPsFromVQSRwithHardFilteredINDELs.output_merged_vcf_index,mergeAllFromVQSR.output_merged_vcf_index]),
+                            regenotype = true,
+                            # Runtime
+                            container = container_gatk,
+                    }
+                }
+            }
+        }
+
+        call processVCFs.mergeVCFs as mergeFinalGenotypes {
+            input:
+                input_vcf_array = flatten(select_all(genotypeGenomicsDBFinal.output_genotypes_vcf)),
+                input_vcf_index_array = flatten(select_all(genotypeGenomicsDBFinal.output_genotypes_vcf_index)),
+                ref_dict = ref_dict,                
+                output_vcf_title = "FinalGenotypes",
                 # Runtime
                 container = container_gatk,
         }
 
+
+
+
     }
 
     output {
-        ## Outputs from initial and repeat modes
+        ## Outputs from initial mode:
+        File? polymorphic_sites_JSON = packagePolymorphicRegions.file
+        File? polymorphic_sites_tar = packagePolymorphicRegions.file_tar
+        ## Outputs from initial/repeat modes:
+        File? high_confidence_sites_BQSR_vcf = mergeSitesForBQSR.output_merged_vcf
+        File? high_confidence_sites_BQSR_vcf_index = mergeSitesForBQSR.output_merged_vcf_index
+        Array[File]? recalibrated_bam = BQSR.recalibrated_bam
+        Array[File]? recalibrated_bam_index = BQSR.recalibrated_bam_index
         Array[File]? table_before = BQSR.table_before
         Array[File]? table_after = BQSR.table_after
         Array[File]? plots = BQSR.plots
-        Array[File]? recalibrated_bam = BQSR.recalibrated_bam
-        Array[File]? recalibrated_bam_index = BQSR.recalibrated_bam_index
         ## Outputs from final mode
-        File? masterLoci = masterLociVcf
-        File? masterLoci_index = masterLociVcfIndex
-        File? finalCallset = gatherFinalCallset.output_vcf
-        File? finalCallsetIndex = gatherFinalCallset.output_vcf_index
+        #File? finalGenotypes = mergeFinalGenotypes.output_merged_vcf
+        #File? finalGenotypesIndex = mergeFinalGenotypes.output_merged_vcf_index
+        #File? finalCallset = gatherFinalCallset.output_vcf
+        #File? finalCallsetIndex = gatherFinalCallset.output_vcf_index
     }
     
 }
