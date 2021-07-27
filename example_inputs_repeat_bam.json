@@ -1,0 +1,49 @@
+{
+  "GATKForPrimatesGermlineSNPsIndels_GATK4.mode": "repeat",
+  "GATKForPrimatesGermlineSNPsIndels_GATK4.cram_not_bam": "false",
+  "GATKForPrimatesGermlineSNPsIndels_GATK4.packaged_polymorphic_regions": "gs://gatk-contrib/GATKForPrimates/polymorphicRegions.tar.gz",
+  "GATKForPrimatesGermlineSNPsIndels_GATK4.ref": "gs://gatk-contrib/GATKForPrimates/rhiRox_chr21_and_chr22_only.fa",
+  "GATKForPrimatesGermlineSNPsIndels_GATK4.ref_dict": "gs://gatk-contrib/GATKForPrimates/rhiRox_chr21_and_chr22_only.dict",
+  "GATKForPrimatesGermlineSNPsIndels_GATK4.ref_fai": "gs://gatk-contrib/GATKForPrimates/rhiRox_chr21_and_chr22_only.fa.fai",
+  "GATKForPrimatesGermlineSNPsIndels_GATK4.flowcell_patterned": "true",
+  "GATKForPrimatesGermlineSNPsIndels_GATK4.merge_contigs_into_num_partitions": "0",
+  "GATKForPrimatesGermlineSNPsIndels_GATK4.sampleList": [{
+      "name": "R.bie-2011A089",
+      "taxon_group": "bieti",
+      "bam": "gs://gatk-contrib/GATKForPrimates/R.bie-2011A089_recalibrated.bam",
+      "bam_index": "gs://gatk-contrib/GATKForPrimates/R.bie-2011A089_recalibrated.bai"
+    },
+    {
+      "name": "R.bie-2011A106",
+      "taxon_group": "bieti",
+      "bam": "gs://gatk-contrib/GATKForPrimates/R.bie-2011A106_recalibrated.bam",
+      "bam_index": "gs://gatk-contrib/GATKForPrimates/R.bie-2011A106_recalibrated.bai"
+    },
+    {
+      "name": "R.bre-2011A082",
+      "taxon_group": "brelichi",
+      "bam": "gs://gatk-contrib/GATKForPrimates/R.bre-2011A082_recalibrated.bam",
+      "bam_index": "gs://gatk-contrib/GATKForPrimates/R.bre-2011A082_recalibrated.bai"
+    },
+    {
+      "name": "R.bre-2011A084",
+      "taxon_group": "brelichi",
+      "bam": "gs://gatk-contrib/GATKForPrimates/R.bre-2011A084_recalibrated.bam",
+      "bam_index": "gs://gatk-contrib/GATKForPrimates/R.bre-2011A084_recalibrated.bai"
+    }
+  ],
+
+  "GATKForPrimatesGermlineSNPsIndels_GATK4.scatterList": [{
+      "name": "scatter1",
+      "intervals": "chr21:1-27800000"
+    },
+    {
+      "name": "scatter2",
+      "intervals": "chr21:27800001-55600000"
+    },
+    {
+      "name": "scatter3",
+      "intervals": "chr21:55600001-81002553"
+    }
+  ]
+}
