@@ -1,5 +1,6 @@
 {
   "GATKForPrimatesGermlineSNPsIndels_GATK4.mode": "final",
+  "GATKForPrimatesGermlineSNPsIndels_GATK4.packaged_polymorphic_regions": "gs://gatk-contrib/GATKForPrimates/polymorphicRegions.tar.gz",
   "GATKForPrimatesGermlineSNPsIndels_GATK4.ref": "gs://gatk-contrib/GATKForPrimates/rhiRox_chr21_and_chr22_only.fa",
   "GATKForPrimatesGermlineSNPsIndels_GATK4.ref_dict": "gs://gatk-contrib/GATKForPrimates/rhiRox_chr21_and_chr22_only.dict",
   "GATKForPrimatesGermlineSNPsIndels_GATK4.ref_fai": "gs://gatk-contrib/GATKForPrimates/rhiRox_chr21_and_chr22_only.fa.fai",
