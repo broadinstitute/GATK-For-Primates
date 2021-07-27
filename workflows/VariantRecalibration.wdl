@@ -121,7 +121,6 @@ workflow VQSR {
             input_vcf = applyVQSRtoSNPs.output_recalibrated_vcf,
             input_vcf_index = applyVQSRtoSNPs.output_recalibrated_vcf_index,
             groupName = groupName,
-            output_vcf_title = "recalibrated_variants_sites_only.",
             # Runtime
             container = container,
     }
