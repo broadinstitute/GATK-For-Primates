@@ -118,3 +118,63 @@ task sortAndFixTags {
         returnCodes: 0
     }
 }
+
+##########################################################################
+## *** TASK: convertToCRAM ***
+##########################################################################
+## Converts input BAM file to CRAM format.
+##########################################################################
+
+task convertToCRAM {
+    input {
+        File ref
+        File ref_dict
+        File ref_fai
+        File input_bam
+        File input_bam_index
+        String sampleName
+        String sampleGroup
+        # Runtime
+        String container
+        Int? runtime_set_preemptible_tries
+        Int? runtime_set_cpu
+        Int? runtime_set_memory
+        Int? runtime_set_disk
+        Int? runtime_set_max_retries
+        Boolean use_ssd = false
+    }
+    ## Runtime parameters
+    Float size_input_files = size(ref, "GB") + size(ref_dict, "GB") + size(ref_fai, "GB") + size(input_bam, "GB") + size(input_bam_index, "GB")
+    Int runtime_calculated_disk = ceil(size_input_files * 2.5)
+    Int command_mem_gb = select_first([runtime_set_memory, 10]) - 1
+    ## Task-specific parameters
+    String bam_basename = basename("~{input_bam}", ".bam")
+    command {
+
+        samtools view -C -T ~{ref} ~{input_bam} -o ~{bam_basename}.cram
+        samtools index ~{bam_basename}.cram ~{bam_basename}.crai
+
+        gatk \
+        ValidateSamFile --java-options "-Xmx~{command_mem_gb}G" \
+        -R ~{ref} \
+        -I ~{bam_basename}.cram \
+        --IGNORE MISSING_TAG_NM \
+        --MODE SUMMARY
+    }
+    output {
+        String output_sampleName = "~{sampleName}"        
+        String output_sampleGroup = "~{sampleGroup}"
+        File output_cram_dedup_tagged = "~{bam_basename}.cram"
+        File output_cram_dedup_tagged_index = "~{bam_basename}.crai"
+    }
+    runtime {
+        docker: container
+        cpu: select_first([runtime_set_cpu, 1])
+        gpu: false
+        memory: select_first([runtime_set_memory, 10]) + " GB"
+        disks: "local-disk " + select_first([runtime_set_disk, runtime_calculated_disk]) + if use_ssd then " SSD" else " HDD"
+        maxRetries: select_first([runtime_set_max_retries, 0])
+        preemptible: select_first([runtime_set_preemptible_tries, 5])
+        returnCodes: 0
+    }
+}
