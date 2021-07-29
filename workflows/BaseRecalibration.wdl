@@ -1,4 +1,4 @@
-version development
+version 1.0
 
 ## Copyright Broad Institute and Wisconsin National Primate Research Center,
 ## University of Wisconsin-Madison, 2021
@@ -30,10 +30,9 @@ workflow BQSR {
         File ref_fai
         File input_bam
         File input_bam_index
-        Array[File] input_SNP_sites
-        Array[File] input_SNP_sites_indexes
-        Array[File] input_INDEL_sites
-        Array[File] input_INDEL_sites_indexes
+        Boolean cram_not_bam
+        File high_confidence_sites_vcf
+        File high_confidence_sites_vcf_index
         String sampleName
         String container_gatk
         String container_gitc
@@ -48,10 +47,9 @@ workflow BQSR {
             ref_fai = ref_fai,
             input_bam = input_bam,
             input_bam_index = input_bam_index,
-            input_SNP_sites = input_SNP_sites,
-            input_SNP_sites_indexes = input_SNP_sites_indexes,
-            input_INDEL_sites = input_INDEL_sites,
-            input_INDEL_sites_indexes = input_INDEL_sites_indexes,
+            cram_not_bam = cram_not_bam,
+            high_confidence_sites_vcf = high_confidence_sites_vcf,
+            high_confidence_sites_vcf_index = high_confidence_sites_vcf_index,
             sampleName = sampleName,
             # Runtime
             container = container_gatk,

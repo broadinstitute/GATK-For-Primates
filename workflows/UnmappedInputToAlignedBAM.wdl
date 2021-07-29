@@ -1,4 +1,4 @@
-version development
+version 1.0
 
 ## Copyright Broad Institute and Wisconsin National Primate Research Center,
 ## University of Wisconsin-Madison, 2021
@@ -34,6 +34,7 @@ workflow unmappedInputToAlignedBAM {
         Array[sampleInfo]+ sampleList
         Boolean flowcell_patterned
         Boolean bwamem2
+        Boolean cram_not_bam
         String container_gatk
         String container_gitc
         String container_python
@@ -151,14 +152,29 @@ workflow unmappedInputToAlignedBAM {
                 # Runtime
                 container = container_gatk,
         }
-        
+
+        ## Convert BAM to CRAM if requested
+        if (cram_not_bam) {
+            call processBAMs.convertToCRAM as convertToCRAM {
+                input:
+                    ref = ref,
+                    ref_dict = ref_dict,
+                    ref_fai = ref_fai,
+                    sampleName = sample.name,
+                    sampleGroup = sample.taxon_group,                
+                    input_bam = sortAndFixTags.output_bam_dedup_tagged,
+                    input_bam_index = sortAndFixTags.output_bam_dedup_tagged_index,
+                    # Runtime
+                    container = container_gatk,
+            }
+        }
     }
 
     output {
-        Array[String] sampleGroups = sortAndFixTags.output_sampleGroup
-        Array[String] sampleNames = sortAndFixTags.output_sampleName
-        Array[File] bams = sortAndFixTags.output_bam_dedup_tagged
-        Array[File] bam_indexes = sortAndFixTags.output_bam_dedup_tagged_index
+        Array[String] sampleGroups = if (cram_not_bam) then select_all(convertToCRAM.output_sampleGroup) else sortAndFixTags.output_sampleGroup
+        Array[String] sampleNames = if (cram_not_bam) then select_all(convertToCRAM.output_sampleName) else sortAndFixTags.output_sampleName
+        Array[File] bams = if (cram_not_bam) then select_all(convertToCRAM.output_cram_dedup_tagged) else sortAndFixTags.output_bam_dedup_tagged
+        Array[File] bam_indexes = if (cram_not_bam) then select_all(convertToCRAM.output_cram_dedup_tagged_index) else sortAndFixTags.output_bam_dedup_tagged_index
         Array[File] bam_dedup_metrics = markDuplicatesSpark.duplication_metrics
     }
 

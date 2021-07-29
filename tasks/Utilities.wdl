@@ -1,4 +1,4 @@
-version development
+version 1.0
 
 ## Copyright Broad Institute and Wisconsin National Primate Research Center,
 ## University of Wisconsin-Madison, 2021
@@ -15,14 +15,58 @@ version development
 ## authorized to run all programs before running this script. Please see the docker
 ## containers for detailed licensing information pertaining to the included programs.
 
-##########################################################################
-## *** TASK: baseRecalibrator ***
-##########################################################################
-## Generates before table, applies BQSR, then generates after table.
-##########################################################################
-
 import "../structs/structs.wdl"
 
+##########################################################################
+## *** TASK: unpackagePolymorphicRegions ***
+##########################################################################
+## Unpackages `packaged_polymorphic_regions` in 'repeat' and 'final'
+## modes, generates blank JSON in 'initial' mode to avoid Cromwell failure
+##########################################################################
+
+task unpackagePolymorphicRegions {
+    input {
+        String mode
+        File? packaged_polymorphic_regions
+    }
+    command <<<
+    set -euo pipefail
+
+    python <<CODE
+
+    import sys
+    import json
+    import tarfile
+
+    mode = "~{mode}"
+
+    if mode == "initial":
+        data = {}
+        data = []
+        data.append({
+            'scatterName': 'NULL',
+            'intervalList': 'NULL'
+        })
+        with open('polymorphicRegions.json', 'w') as outfile:
+            json.dump(data, outfile, sort_keys=True, indent=4)
+
+    if mode != "initial":
+        try:
+            packaged_tar = tarfile.open('~{packaged_polymorphic_regions}')
+            packaged_tar.extractall('.')
+            packaged_tar.close()
+        except FileNotFoundError:
+            sys.stderr.write("Cannot locate or read packaged polymorphic regions.")
+            sys.exit(1)
+
+    CODE
+    >>>
+    output {
+        File polymorphicRegionsJSON = "polymorphicRegions.json"
+        Array[File] polymorphicRegionsIntervalLists = glob("*.interval_list")
+    }
+
+}
 
 ##########################################################################
 ## *** TASK: generateBamJson ***
@@ -88,6 +132,76 @@ task generateBamJSON {
      }
 }
 
+##########################################################################
+## *** TASK: packagePolymorphicRegions ***
+##########################################################################
+## Generates a JSON comprising the filenames of the interval lists per
+## scatter, and packages this into a .tar.gz with the interval lists.
+##########################################################################
+
+task packagePolymorphicRegions {
+    input {
+        Array[String] scatterNames
+        Array[File] intervalLists
+        Array[String] intervalListFilenames
+        # Runtime options
+        String container
+        Int? runtime_set_preemptible_tries
+        Int? runtime_set_cpu
+        Int? runtime_set_memory
+        Int? runtime_set_disk
+        Int? runtime_set_max_retries
+        Boolean use_ssd = false
+    }
+
+    command <<<
+    set -oe pipefail
+
+    python << CODE
+    import json
+    import tarfile
+    import os.path
+
+    scatterName = ['~{sep="','" scatterNames}']
+    intervalList = ['~{sep="','" intervalLists}']
+    intervalListFilenames = ['~{sep="','" intervalListFilenames}']
+
+    data = {}
+    data = []
+
+    for i in range(len(scatterName)):
+        data.append({
+            'scatterName': scatterName[i],
+            'intervalList': intervalListFilenames[i],
+        })
+
+    with open('polymorphicRegions.json', 'w') as outfile:
+        json.dump(data, outfile, sort_keys=True, indent=4)
+
+    tar = tarfile.open("polymorphicRegions.tar.gz", "w:gz")
+    for name in ['~{sep="','" intervalLists}']:
+        tar.add(name, arcname=os.path.basename(name))
+    tar.add('polymorphicRegions.json')
+    tar.close()
+
+    CODE
+
+    >>>
+    output {
+        File file = "polymorphicRegions.json"
+        File file_tar = "polymorphicRegions.tar.gz"
+    }
+    runtime {
+        docker: container
+        cpu: select_first([runtime_set_cpu, 1])
+        gpu: false
+        memory: select_first([runtime_set_memory, 1]) + " GB"
+        disks: "local-disk " + select_first([runtime_set_disk, 10]) + if use_ssd then " SSD" else " HDD"
+        maxRetries: select_first([runtime_set_max_retries, 0])
+        preemptible: select_first([runtime_set_preemptible_tries, 5])
+        returnCodes: 0
+     }
+}
 
 ##########################################################################
 ## *** TASK: generateHaplotypeJSON ***
@@ -100,9 +214,7 @@ task generateBamJSON {
 task generateHaplotypeJSON {
     input {
         Array[String] sampleGroups
-        Array[String] title_gvcfs
         Array[String] gvcfs
-        Array[String] gvcf_indexes
         Boolean multiple_taxonomic_groups
         # Runtime options
         String container
@@ -120,9 +232,7 @@ task generateHaplotypeJSON {
     import json
 
     sampleGroup = ['~{sep="','" sampleGroups}']
-    title_gvcf = ['~{sep="','" title_gvcfs}']
     gvcf = ['~{sep="','" gvcfs}']
-    gvcf_index = ['~{sep="','" gvcf_indexes}']
     make_cohort = '~{multiple_taxonomic_groups}'
 
     data = {}
@@ -132,25 +242,18 @@ task generateHaplotypeJSON {
         for i in range(len(sampleGroup)):
             data.append({
                 'groupName': sampleGroup[i],
-                'title_gvcf': title_gvcf[i],
-                'gvcf': gvcf[i],
-                'gvcf_index': gvcf_index[i]
+                'gvcf': gvcf[i]
             })
             data.append({
                 'groupName': 'Cohort',
-                'title_gvcf': title_gvcf[i],
-                'gvcf': gvcf[i],
-                'gvcf_index': gvcf_index[i]
+                'gvcf': gvcf[i]
             })
     else:
         for i in range(len(sampleGroup)):
             data.append({
                 'groupName': sampleGroup[i],
-                'title_gvcf': title_gvcf[i],
-                'gvcf': gvcf[i],
-                'gvcf_index': gvcf_index[i]
+                'gvcf': gvcf[i]
             })
-
 
     with open('haplotypeJSON.txt', 'w') as outfile:
         json.dump(data, outfile, sort_keys=True, indent=4)
@@ -260,6 +363,163 @@ task generateGenotypeJSON {
         disks: "local-disk " + select_first([runtime_set_disk, 10]) + if use_ssd then " SSD" else " HDD"
         maxRetries: select_first([runtime_set_max_retries, 0])
         preemptible: select_first([runtime_set_preemptible_tries, 5])
+        returnCodes: 0
+     }
+}
+
+##############################################################################################################################################################################################################################
+
+##########################################################################
+## *** TASK: pipeHaplotypes ***
+##########################################################################
+## Searches a JSON struct for the query.
+##########################################################################
+
+task pipeHaplotypes {
+    input {
+        String groupName
+        String scatterName
+        File haplotypeJSON
+        # Runtime
+        String container
+        Int? runtime_set_preemptible_tries
+        Int? runtime_set_cpu
+        Int? runtime_set_memory
+        Int? runtime_set_disk
+        Int? runtime_set_max_retries
+        Boolean use_ssd = false
+    }
+    command <<<
+    set -oe pipefail
+
+    python << CODE
+    import json
+
+    with open('~{haplotypeJSON}') as f:
+        haplotypeJSON = json.load(f)
+
+    with open('gvcfs.txt', 'w') as f_gvcf, open('gvcf_indexes.txt', 'w') as f_gvcf_indexes:
+        for keyval in haplotypeJSON:
+            if keyval['groupName'] == '~{groupName}' and keyval['scatterName'] == '~{scatterName}':
+                f_gvcf.write('keyval['gvcf']' + '\n')
+                f_gvcf_indexes.write('keyval['gvcf_index']' + '.tbi\n')
+
+    CODE
+
+    >>>
+    output {
+        Array[String] gvcfs = read_lines("gvcfs.txt")
+        Array[String] gvcf_indexes = read_lines("gvcf_indexes.txt")
+    }
+    runtime {
+        docker: container
+        cpu: select_first([runtime_set_cpu, 1])
+        gpu: false
+        memory: select_first([runtime_set_memory, 2]) + " GB"
+        disks: "local-disk " + select_first([runtime_set_disk, 5]) + if use_ssd then " SSD" else " HDD"
+        maxRetries: select_first([runtime_set_max_retries, 0])
+        preemptible: select_first([runtime_set_preemptible_tries, 5])
+        returnCodes: 0
+     }
+
+}
+
+
+
+
+##########################################################################
+## *** TASK: makeBlankJSON ***
+##########################################################################
+## Makes a blank JSON file.
+##########################################################################
+
+task makeBlankJSON {
+    input {
+        # Runtime
+        String container
+    }
+    command <<<
+    set -oe pipefail
+
+    python << CODE
+    import json
+
+    data = {}
+    data = []
+
+    data.append({
+        'scatterName': 'NULL',
+        'intervalList': 'NULL'
+    })
+
+    with open('blankJSON.txt', 'w') as outfile:
+        json.dump(data, outfile, sort_keys=True, indent=4)
+
+    CODE
+
+    >>>
+    output {
+        File file = "blankJSON.txt"
+    }
+    runtime {
+        docker: container
+        cpu: "1"
+        gpu: false
+        memory: "1 GB"
+        disks: "local-disk " + "5 HDD"
+        maxRetries: "0"
+        preemptible: "5"
+        returnCodes: 0
+     }
+}
+
+
+
+
+
+
+##########################################################################
+## *** TASK: fetchIntervalList ***
+##########################################################################
+## Makes a blank JSON file.
+##########################################################################
+
+task fetchIntervalListByScatter {
+    input {
+        # Runtime
+        String container
+    }
+    command <<<
+    set -oe pipefail
+
+    python << CODE
+    import json
+
+    data = {}
+    data = []
+
+    data.append({
+        'scatterName': 'NULL',
+        'intervalList': 'NULL'
+    })
+
+    with open('blankJSON.txt', 'w') as outfile:
+        json.dump(data, outfile, sort_keys=True, indent=4)
+
+    CODE
+
+    >>>
+    output {
+        File file = "blankJSON.txt"
+    }
+    runtime {
+        docker: container
+        cpu: "1"
+        gpu: false
+        memory: "1 GB"
+        disks: "local-disk " + "5 HDD"
+        maxRetries: "0"
+        preemptible: "5"
         returnCodes: 0
      }
 }

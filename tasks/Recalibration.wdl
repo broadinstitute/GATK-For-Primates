@@ -1,4 +1,4 @@
-version development
+version 1.0
 
 ## Copyright Broad Institute and Wisconsin National Primate Research Center,
 ## University of Wisconsin-Madison, 2021
@@ -28,11 +28,10 @@ task baseRecalibrator {
         File ref_fai
         File input_bam
         File input_bam_index
+        Boolean cram_not_bam
         String sampleName
-        Array[File] input_SNP_sites
-        Array[File] input_SNP_sites_indexes
-        Array[File] input_INDEL_sites
-        Array[File] input_INDEL_sites_indexes
+        File high_confidence_sites_vcf
+        File high_confidence_sites_vcf_index
         # runtime
         String container
         Int? runtime_set_preemptible_tries
@@ -42,9 +41,11 @@ task baseRecalibrator {
         Int? runtime_set_max_retries
         Boolean use_ssd = false
     }
-    Float size_input_files = size(input_bam, "GB") + size(input_bam_index, "GB") + size(ref, "GB") + size(ref_dict, "GB")
+    Float size_input_files = size(input_bam, "GB") + size(input_bam_index, "GB") + size(ref, "GB") + size(ref_dict, "GB") + size(ref_fai, "GB") + size(high_confidence_sites_vcf, "GB") + size(high_confidence_sites_vcf_index, "GB")
     Int runtime_calculated_disk = ceil(size_input_files * 2.5)
     Int command_mem_gb = select_first([runtime_set_memory, 6]) - 2
+    String extension = if cram_not_bam then "cram" else "bam"
+    String extension_index = if cram_not_bam then "crai" else "bai"
     command <<<
         set -euo pipefail
         
@@ -53,8 +54,7 @@ task baseRecalibrator {
         BaseRecalibrator --java-options "-Xmx~{command_mem_gb}G" \
         -I ~{input_bam} \
         -R ~{ref} \
-        --known-sites ~{sep=" --known-sites " input_SNP_sites} \
-        --known-sites ~{sep=" --known-sites " input_INDEL_sites} \
+        --known-sites ~{high_confidence_sites_vcf} \
         -O ~{sampleName}.before.table
 
         #APPLY BQSR TO ADJUST THE QUALITY SCORES
@@ -63,23 +63,24 @@ task baseRecalibrator {
         -I ~{input_bam} \
         -R ~{ref} \
         --bqsr-recal-file ~{sampleName}.before.table \
-        -O ~{sampleName}_recalibrated.bam
+        -O ~{sampleName}_recalibrated.~{extension}
+
+        samtools index ~{sampleName}_recalibrated.~{extension} ~{sampleName}_recalibrated.~{extension_index}
 
         #GENERATE AFTER TABLE
         gatk \
         BaseRecalibrator --java-options "-Xmx~{command_mem_gb}G" \
-        -I ~{sampleName}_recalibrated.bam \
+        -I ~{sampleName}_recalibrated.~{extension} \
         -R ~{ref} \
-        --known-sites ~{sep=" --known-sites " input_SNP_sites} \
-        --known-sites ~{sep=" --known-sites " input_INDEL_sites} \
+        --known-sites ~{high_confidence_sites_vcf} \
         -O ~{sampleName}.after.table
 
     >>>
     output {
         File table_before = "~{sampleName}.before.table"
         File table_after = "~{sampleName}.after.table"
-        File recalibrated_bam = "~{sampleName}_recalibrated.bam"
-        File recalibrated_bam_index = "~{sampleName}_recalibrated.bai"
+        File recalibrated_bam = "~{sampleName}_recalibrated.~{extension}"
+        File recalibrated_bam_index = "~{sampleName}_recalibrated.~{extension_index}"
     }
     runtime {
         docker: container

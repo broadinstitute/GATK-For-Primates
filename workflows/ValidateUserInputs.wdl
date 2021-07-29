@@ -1,4 +1,4 @@
-version development
+version 1.0
 
 ## Copyright Broad Institute and Wisconsin National Primate Research Center,
 ## University of Wisconsin-Madison, 2021
@@ -25,8 +25,6 @@ import "../tasks/Utilities.wdl" as utilities
 
 workflow validateUserInputs {
 
-    String pipeline_version = "pre-alpha"
-
     ##########################################################################
     ## WORKFLOW INPUTS
     ##########################################################################
@@ -41,46 +39,61 @@ workflow validateUserInputs {
         File? truth_set_SNPs_index
         File? truth_set_INDELs
         File? truth_set_INDELs_index
-        Boolean mode_is_initial
-        Boolean validate_reference_vcf = false # options: true / false
-        Boolean validate_truth_sets = false # options: true / false
+        File? packaged_polymorphic_regions
+        String mode
+        Boolean validate_truth_sets = true # options: true / false
         String container_gatk
         String container_python
     }
 
     ##########################################################################
-    ## VALIDATE REFERENCE VCF
-    ## The default is false. This can be enabled by setting the Boolean
-    ## 'validate_reference_vcf' to true. It will only run in 'initial' mode.
+    ## Fail workflow if `mode` is not 'initial', 'repeat' or 'final'
     ##########################################################################
 
-    if (mode_is_initial && validate_reference_vcf) {
-        call QC.validateVCF as ValidateReferenceVcf {
+    if ((mode != "initial") && (mode != "repeat") && (mode != "final")) {
+        call QC.failWithError as failWrongMode {
             input:
-                variant_file = ref,
-                ref_dict = ref_dict,
-                ref_fai = ref_fai,
-                optional_arguments = "-Xtype ALL",
-                # Runtime options
-                container = container_gatk,
+                message = "Input mode must be either 'initial', 'repeat' or 'final'."
         }
     }
 
     ##########################################################################
-    ## VALIDATE TRUTH SETS IF AVAILABLE
-    ## This will always run in initial mode. To force validation in subsequent
-    ## modes, set the Boolean 'validate_truth_sets' to true.
+    ## Fail workflow in 'repeat'/'final' modes if required input file
+    ## `packaged_polymorphic_regions` is missing
     ##########################################################################
 
-    if (mode_is_initial || validate_truth_sets) {
+    if ((mode != "initial") && (!defined(packaged_polymorphic_regions))) {
+        call QC.failWithError as failMissingPackage {
+            input:
+                message = "Packaged polymorphic regions from 'initial' mode must be provided in 'repeat' or 'final' modes."
+        }
+    }
+
+    ##########################################################################
+    ## Unpackage polymorphic region JSON and interval list files, or make blank
+    ## JSON in 'initial' mode (as Cromwell dislikes optional inputs/outputs)
+    ##########################################################################
+
+    call utilities.unpackagePolymorphicRegions as unpackagePolymorphicRegions {
+        input:
+            mode = mode,
+            packaged_polymorphic_regions = packaged_polymorphic_regions,
+    }
+
+    ##########################################################################
+    ## Validate truth sets in 'final' mode only.
+    ## This is 'true' by default in the main workflow options
+    ##########################################################################
+
+    if ((mode == "final") && (validate_truth_sets)) {
         if (defined(truth_set_INDELs)) {
             call QC.validateVCF as ValidateTruthINDELs {
                 input:
-                    variant_file = truth_set_INDELs,
-                    variant_file_index = truth_set_INDELs_index,
                     ref = ref,
                     ref_dict = ref_dict,
                     ref_fai = ref_fai,
+                    variant_file = truth_set_INDELs,
+                    variant_file_index = truth_set_INDELs_index,
                     optional_arguments = "-Xtype CHR_COUNTS -Xtype IDS -Xtype ALLELES",
                     # Runtime options
                     container = container_gatk,
@@ -89,11 +102,11 @@ workflow validateUserInputs {
         if (defined(truth_set_SNPs)) {
             call QC.validateVCF as ValidateTruthSNPs {
                 input:
-                    variant_file = truth_set_SNPs,
-                    variant_file_index = truth_set_SNPs_index,
                     ref = ref,
                     ref_dict = ref_dict,
                     ref_fai = ref_fai,
+                    variant_file = truth_set_SNPs,
+                    variant_file_index = truth_set_SNPs_index,
                     optional_arguments = "-Xtype CHR_COUNTS -Xtype IDS -Xtype ALLELES",
                     # Runtime options
                     container = container_gatk,
@@ -102,11 +115,8 @@ workflow validateUserInputs {
     }
 
     ##########################################################################
-    ## VALIDATE THE USER-PROVIDED DATA FOR EACH SAMPLE RECORD
-    ## This is performed within this WDL and the ExitWithError task is
-    ## called if needed. The rationale for this is to avoid scattering
-    ## each sample to a separate task, which would require resource requests
-    ## per task and thus be more computationally expensive.
+    ## Validate user-provided data for each sample record
+    ## Validation prevents computationally expensive failures later on!
     ##########################################################################
 
     scatter (sample in sampleList) {
@@ -123,17 +133,23 @@ workflow validateUserInputs {
                 bam = if defined(sample.bam) then sample.bam else "NULL",
                 bam_index = if defined(sample.bam_index) then sample.bam_index else "NULL",
                 unmapped_bam = if defined(sample.unmapped_bam) then sample.unmapped_bam else "NULL",
-                container = container_python,
         }
     }
 
     ##########################################################################
-    ## VALIDATE THE USER-PROVIDED DATA ACROSS THE COHORT
-    ## This checks for common errors in the sample and scatter lists.
+    ## Validate user-provided data across the cohort
+    ## This checks for common errors in the sample and scatter lists
     ##########################################################################
+
+    scatter (scttr in scatterList) {
+        String loop_scatterNames = scttr.name
+        String loop_scatterIntervals = scttr.intervals
+    }
 
     call QC.validateCohort as validateCohort {
         input:
+            scatterNames = loop_scatterNames,
+            scatterIntervals = loop_scatterIntervals,
             groupNames = validateRecords.groupNames,
             sampleNames = validateRecords.sampleNames,
             RG_IDs = validateRecords.RG_IDs,
@@ -148,11 +164,14 @@ workflow validateUserInputs {
     ##########################################################################
 
     output {
+        File polymorphic_regions_json = unpackagePolymorphicRegions.polymorphicRegionsJSON
+        Array[File] polymorphicRegionsIntervalLists = unpackagePolymorphicRegions.polymorphicRegionsIntervalLists
         Array[String] groupNames = select_all(validateRecords.groupNames)
         Array[String] sampleNames = select_all(validateRecords.sampleNames)
         Array[String] bams = select_all(validateRecords.bams)
         Array[String] bam_indexes = select_all(validateRecords.bam_indexes)
         Array[String] unmapped_bams = select_all(validateRecords.unmapped_bams)
+        Array[String] scatterNames = select_all(validateCohort.output_scatterNames)
         Boolean multiple_taxonomic_groups = validateCohort.multiple_taxonomic_groups
     }
 

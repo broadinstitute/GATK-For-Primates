@@ -1,4 +1,4 @@
-version development
+version 1.0
 
 ## Copyright Broad Institute and Wisconsin National Primate Research Center,
 ## University of Wisconsin-Madison, 2021
@@ -84,7 +84,6 @@ workflow partialVQSR {
             input_vcf = applyVQSRtoPartial.output_recalibrated_vcf,
             input_vcf_index = applyVQSRtoPartial.output_recalibrated_vcf_index,
             groupName = groupName,
-            output_vcf_title = "recalibrated_available_sites_only.",
             # Runtime
             container = container,
     }

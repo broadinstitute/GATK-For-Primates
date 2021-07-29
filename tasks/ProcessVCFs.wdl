@@ -1,4 +1,4 @@
-version development
+version 1.0
 
 ## Copyright Broad Institute and Wisconsin National Primate Research Center,
 ## University of Wisconsin-Madison, 2021
@@ -16,114 +16,6 @@ version development
 ## containers for detailed licensing information pertaining to the included programs.
 
 ##########################################################################
-## *** TASK: splitMultiAllelics ***
-##########################################################################
-## Splits multi-allelic rows without trimming alleles.
-##########################################################################
-
-task splitMultiAllelics {
-    input {
-        File ref
-        File ref_dict
-        File ref_fai
-        File input_vcf
-        File input_vcf_index
-        # runtime
-        String container
-        Int? runtime_set_preemptible_tries
-        Int? runtime_set_cpu
-        Int? runtime_set_memory
-        Int? runtime_set_disk
-        Int? runtime_set_max_retries
-        Boolean use_ssd = false
-    }
-    ## Runtime parameters
-    Float size_input_files = size(ref, "GB") + size(ref_dict, "GB") + size(ref_fai, "GB") + size(input_vcf, "GB") + size(input_vcf_index, "GB")
-    Int runtime_calculated_disk = ceil(size_input_files * 2.5)
-    Int command_mem_gb = select_first([runtime_set_memory, 4]) - 1
-    ## Task-specific parameters
-    String output_vcf_title = basename(input_vcf, ".g.vcf.gz") + "_split_multiAllelics"
-    command <<<
-
-        gatk \
-        LeftAlignAndTrimVariants --java-options "-Xmx~{command_mem_gb}G" \
-        -R ~{ref} \
-        -V ~{input_vcf} \
-        -O ~{output_vcf_title}.vcf.gz \
-        --split-multi-allelics \
-        --dont-trim-alleles
-
-    >>>
-    output {
-        File output_vcf = "~{output_vcf_title}.vcf.gz"
-        File output_vcf_index = "~{output_vcf_title}.vcf.gz.tbi"
-    }
-    runtime {
-        docker: container
-        cpu: select_first([runtime_set_cpu, 1])
-        gpu: false
-        memory: select_first([runtime_set_memory, 4]) + " GB"
-        disks: "local-disk " + select_first([runtime_set_disk, runtime_calculated_disk]) + if use_ssd then " SSD" else " HDD"
-        maxRetries: select_first([runtime_set_max_retries, 0])
-        preemptible: select_first([runtime_set_preemptible_tries, 5])
-        returnCodes: 0
-     }
-}
-
-##########################################################################
-## *** TASK: splitVCFs ***
-##########################################################################
-## Splits input VCF into SNP- and INDEL-only VCFs.
-##########################################################################
-
-task splitVCFs {
-    input {
-        File input_vcf
-        File input_vcf_index
-        # runtime
-        String container
-        Int? runtime_set_preemptible_tries
-        Int? runtime_set_cpu
-        Int? runtime_set_memory
-        Int? runtime_set_disk
-        Int? runtime_set_max_retries
-        Boolean use_ssd = false
-    }
-    Float size_input_files = size(input_vcf, "GB") + size(input_vcf_index, "GB")
-    Int runtime_calculated_disk = ceil(size_input_files * 2.5)
-    Int command_mem_gb = select_first([runtime_set_memory, 4]) - 1
-    String output_vcf_title = basename(input_vcf, ".g.vcf.gz") + "_split"
-    command <<<
-
-        gatk \
-        SplitVcfs --java-options "-Xmx~{command_mem_gb}G" \
-        -I ~{input_vcf} \
-        --SNP_OUTPUT ~{output_vcf_title}_SNPs_only.vcf.gz \
-        --INDEL_OUTPUT ~{output_vcf_title}_INDELs_only.vcf.gz \
-        --STRICT false
-
-    >>>
-    output {
-        File output_vcf_SNPs_only = "~{output_vcf_title}_SNPs_only.vcf.gz"
-        File output_vcf_SNPs_only_index = "~{output_vcf_title}_SNPs_only.vcf.gz.tbi"
-        File output_vcf_INDELs_only = "~{output_vcf_title}_INDELs_only.vcf.gz"
-        File output_vcf_INDELs_only_index = "~{output_vcf_title}_INDELs_only.vcf.gz.tbi"
-        #vcfFile output_vcfFile_SNPs = {"groupName": "~{groupName}", "scatterName": "~{scatterName}", "vcf": "~{output_vcf_title}_SNPs_only.vcf.gz", "vcf_index": "~{output_vcf_title}_SNPs_only.vcf.gz.tbi"}
-        #vcfFile output_vcfFile_INDELs = {"groupName": "~{groupName}", "scatterName": "~{scatterName}", "vcf": "~{output_vcf_title}_INDELs_only.vcf.gz", "vcf_index": "~{output_vcf_title}_INDELs_only.vcf.gz.tbi"}
-    }
-    runtime {
-        docker: container
-        cpu: select_first([runtime_set_cpu, 1])
-        gpu: false
-        memory: select_first([runtime_set_memory, 4]) + " GB"
-        disks: "local-disk " + select_first([runtime_set_disk, runtime_calculated_disk]) + if use_ssd then " SSD" else " HDD"
-        maxRetries: select_first([runtime_set_max_retries, 0])
-        preemptible: select_first([runtime_set_preemptible_tries, 5])
-        returnCodes: 0
-     }
-}
-
-##########################################################################
 ## *** TASK: makeSitesOnly ***
 ##########################################################################
 ## Makes a sites-only version of the input VCF.
@@ -134,7 +26,6 @@ task makeSitesOnly {
         File input_vcf
         File input_vcf_index
         String groupName
-        String output_vcf_title
         # Runtime
         String container
         Int? runtime_set_preemptible_tries
@@ -147,16 +38,17 @@ task makeSitesOnly {
     Float size_input_files = size(input_vcf, "GB") + size(input_vcf_index, "GB") 
     Int runtime_calculated_disk = ceil(size_input_files * 2)
     Int command_mem_gb = select_first([runtime_set_memory, 4]) - 1
+    String basename = basename(input_vcf, ".vcf.gz")
     command <<<
     
         gatk MakeSitesOnlyVcf --java-options "-Xmx~{command_mem_gb}G" \
         -I ~{input_vcf} \
-        -O ~{output_vcf_title}.vcf.gz
+        -O ~{basename}_sitesOnly.vcf.gz
 
     >>>
     output {
-        File output_vcf = "~{output_vcf_title}.vcf.gz"
-        File output_vcf_index = "~{output_vcf_title}.vcf.gz.tbi"
+        File output_vcf = "~{basename}_sitesOnly.vcf.gz"
+        File output_vcf_index = "~{basename}_sitesOnly.vcf.gz.tbi"
         String output_groupName = "~{groupName}"
     }
     runtime {
@@ -164,61 +56,6 @@ task makeSitesOnly {
         cpu: select_first([runtime_set_cpu, 1])
         gpu: false
         memory: select_first([runtime_set_memory, 4]) + " GB"
-        disks: "local-disk " + select_first([runtime_set_disk, runtime_calculated_disk]) + if use_ssd then " SSD" else " HDD"
-        maxRetries: select_first([runtime_set_max_retries, 0])
-        preemptible: select_first([runtime_set_preemptible_tries, 5])
-        returnCodes: 0
-     }
-}
-
-##########################################################################
-## *** TASK: gatherVCFs ***
-##########################################################################
-## Gathers non-overlapping VCF files into a single, sorted VCF file.
-##########################################################################
-
-task gatherVCFs {
-    input {
-        Array[File] input_vcfs
-        Array[File] input_vcfs_indexes
-        String output_vcf_title
-        String? groupName
-        # Runtime
-        String container
-        Int? runtime_set_preemptible_tries
-        Int? runtime_set_cpu
-        Int? runtime_set_memory
-        Int? runtime_set_disk
-        Int? runtime_set_max_retries
-        Boolean use_ssd = false
-    }
-    Float size_input_files = size(input_vcfs, "GB") + size(input_vcfs_indexes, "GB")
-    Int runtime_calculated_disk = ceil(size_input_files * 2.5)
-    Int command_mem_gb = select_first([runtime_set_memory, 7]) - 1
-    command <<<
-    
-            gatk \
-            GatherVcfs --java-options "-Xmx~{command_mem_gb}G" \
-            -I ~{sep=" -I " input_vcfs} \
-            -O ~{output_vcf_title}.vcf.gz \
-            --REORDER_INPUT_BY_FIRST_VARIANT
-
-            ## Index creation from block-compressed files not yet support
-            ## See https://github.com/broadinstitute/picard/issues/789
-            gatk IndexFeatureFile \
-            -I ~{output_vcf_title}.vcf.gz
-
-    >>>
-    output {
-        File output_vcf = "~{output_vcf_title}.vcf.gz"
-        File output_vcf_index = "~{output_vcf_title}.vcf.gz.tbi"
-        String output_groupName = "~{groupName}"
-    }
-    runtime {
-        docker: container
-        cpu: select_first([runtime_set_cpu, 1])
-        gpu: false
-        memory: select_first([runtime_set_memory, 7]) + " GB"
         disks: "local-disk " + select_first([runtime_set_disk, runtime_calculated_disk]) + if use_ssd then " SSD" else " HDD"
         maxRetries: select_first([runtime_set_max_retries, 0])
         preemptible: select_first([runtime_set_preemptible_tries, 5])
@@ -281,135 +118,11 @@ task mergeVCFs {
      }
 }
 
-##########################################################################
-## *** TASK: hardFilter ***
-##########################################################################
-## Hard-filters input VCF file according to provided parameters.
-##########################################################################
-
-task hardFilter {
-    input {
-        File ref
-        File ref_dict
-        File ref_fai
-        File input_vcf
-        File input_vcf_index
-        String filters
-        String? optional_parameters
-        String? type
-        Boolean makeSitesOnly
-        # runtime
-        String container
-        Int? runtime_set_preemptible_tries
-        Int? runtime_set_cpu
-        Int? runtime_set_memory
-        Int? runtime_set_disk
-        Int? runtime_set_max_retries
-        Boolean use_ssd = false
-    }
-    Float size_input_files = size(ref, "GB") + size(ref_dict, "GB") + size(ref_fai, "GB") + size(input_vcf, "GB") + size(input_vcf_index, "GB")
-    Int runtime_calculated_disk = ceil(size_input_files * 2.5) + 2
-    Int command_mem_gb = select_first([runtime_set_memory, 7]) - 1
-    String output_vcf_title = basename(input_vcf, ".g.vcf.gz") + "_hard_filtered_${type}_only"
-    String callMakesSitesOnlyVcf = if makeSitesOnly then "gatk MakeSitesOnlyVcf -I ~{output_vcf_title}.vcf.gz -O ~{output_vcf_title}_sites_only.vcf.gz" else ""
-
-    command <<<
-
-        gatk \
-        VariantFiltration --java-options "-Xmx~{command_mem_gb}G" \
-        -R ~{ref} \
-        -V ~{input_vcf} \
-        -O ~{output_vcf_title}_temp.vcf.gz \
-        ~{filters} ~{optional_parameters} \
-        --verbosity ERROR
-
-        gatk \
-        SelectVariants --java-options "-Xmx~{command_mem_gb}G" \
-        -R ~{ref} \
-        -V ~{output_vcf_title}_temp.vcf.gz \
-        -O ~{output_vcf_title}.vcf.gz \
-        --exclude-filtered
-        
-        ~{callMakesSitesOnlyVcf}
-
-    >>>
-    output {
-        File output_vcf = "~{output_vcf_title}.vcf.gz"
-        String output_vcf_string = "~{output_vcf_title}.vcf.gz"
-        File output_vcf_index = "~{output_vcf_title}.vcf.gz.tbi"
-        File? output_sites_only_vcf = "~{output_vcf_title}_sites_only.vcf.gz"
-        File? output_sites_only_vcf_index = "~{output_vcf_title}_sites_only.vcf.gz.tbi"
-    }
-    runtime {
-        docker: container
-        cpu: select_first([runtime_set_cpu, 1])
-        gpu: false
-        memory: select_first([runtime_set_memory, 7]) + " GB"
-        disks: "local-disk " + select_first([runtime_set_disk, runtime_calculated_disk]) + if use_ssd then " SSD" else " HDD"
-        maxRetries: select_first([runtime_set_max_retries, 0])
-        preemptible: select_first([runtime_set_preemptible_tries, 5])
-        returnCodes: 0
-     }
-}
-
-
-
-##########################################################################
-## *** TASK: splitIntervals ***
-##########################################################################
-## Splits final callset for scatter gathering over variants.
-##########################################################################
-
-task splitIntervals {
-    input {
-        File ref
-        File ref_dict
-        File ref_fai
-        File masterLociVcf
-        File masterLociVcfIndex
-        # runtime
-        String container
-        Int? runtime_set_preemptible_tries
-        Int? runtime_set_cpu
-        Int? runtime_set_memory
-        Int? runtime_set_disk
-        Int? runtime_set_max_retries
-        Boolean use_ssd = false
-    }
-    Float size_input_files = size(ref, "GB") + size(ref_dict, "GB") + size(ref_fai, "GB") + size(masterLociVcf, "GB") + size(masterLociVcfIndex, "GB")
-    Int runtime_calculated_disk = ceil(size_input_files * 1.75)
-    Int command_mem_gb = select_first([runtime_set_memory, 5]) - 1
-    command <<<
-
-        gatk SplitIntervals \
-        -R ~{ref} \
-        -L ~{masterLociVcf} \
-        --scatter-count 30 \
-        --subdivision-mode BALANCING_WITHOUT_INTERVAL_SUBDIVISION \
-        --sites-only-vcf-output \
-        -O interval_lists
-
-    >>>
-    output {
-        Array[File] interval_lists = glob("interval_lists/*interval_list")
-    }
-    runtime {
-        docker: container
-        cpu: select_first([runtime_set_cpu, 1])
-        gpu: false
-        memory: select_first([runtime_set_memory, 5]) + " GB"
-        disks: "local-disk " + select_first([runtime_set_disk, runtime_calculated_disk]) + if use_ssd then " SSD" else " HDD"
-        maxRetries: select_first([runtime_set_max_retries, 0])
-        preemptible: select_first([runtime_set_preemptible_tries, 5])
-        returnCodes: 0
-     }
-}
-
 
 ##########################################################################
 ## *** TASK: mergeManyVCFs ***
 ##########################################################################
-## tbd
+## Merges many VCFs (presented in two Array[File])
 ##########################################################################
 
 task mergeManyVCFs {
@@ -450,6 +163,270 @@ task mergeManyVCFs {
         cpu: select_first([runtime_set_cpu, 1])
         gpu: false
         memory: select_first([runtime_set_memory, 6]) + " GB"
+        disks: "local-disk " + select_first([runtime_set_disk, runtime_calculated_disk]) + if use_ssd then " SSD" else " HDD"
+        maxRetries: select_first([runtime_set_max_retries, 0])
+        preemptible: select_first([runtime_set_preemptible_tries, 5])
+        returnCodes: 0
+     }
+}
+
+##########################################################################
+## *** TASK: polymorphicSitesToRegions ***
+##########################################################################
+## Merges VCFs then pre-processes into interval lists
+##########################################################################
+
+task polymorphicSitesToRegions {
+    input {
+        File ref
+        File ref_dict
+        File ref_fai
+        Array[File] input_vcf_array
+        Array[File] input_vcf_index_array
+        String scatterName
+        # Runtime
+        String container
+        Int? runtime_set_preemptible_tries
+        Int? runtime_set_cpu
+        Int? runtime_set_memory
+        Int? runtime_set_disk
+        Int? runtime_set_max_retries
+        Boolean use_ssd = false
+    }
+    Float size_input_files = size(ref, "GB") + size(ref_dict, "GB") + size(ref_fai, "GB") + size(input_vcf_array, "GB") + size(input_vcf_index_array, "GB")
+    Int runtime_calculated_disk = ceil(size_input_files * 2.5)
+    Int command_mem_gb = select_first([runtime_set_memory, 7]) - 1
+    command <<<
+
+        gatk \
+        MergeVcfs --java-options "-Xmx~{command_mem_gb}G" \
+        -I ~{sep=" -I " input_vcf_array} \
+        -O ~{scatterName}_polymorphic_sites.vcf.gz \
+        -D ~{ref_dict}
+
+        gatk \
+        VcfToIntervalList --java-options "-Xmx~{command_mem_gb}G" \
+        -I ~{scatterName}_polymorphic_sites.vcf.gz \
+        -O ~{scatterName}_polymorphic_sites.interval_list \
+        
+        gatk \
+        PreprocessIntervals --java-options "-Xmx~{command_mem_gb}G" \
+        -R ~{ref} \
+        -L ~{scatterName}_polymorphic_sites.interval_list \
+        --bin-length 0 \
+        --padding 250 \
+        --interval-merging-rule OVERLAPPING_ONLY \
+        -O ~{scatterName}_polymorphic_regions.interval_list
+
+    >>>
+    output {
+        String output_scatterName = "~{scatterName}"
+        File output_intervalList = "~{scatterName}_polymorphic_regions.interval_list"
+        String output_intervalList_filename = "~{scatterName}_polymorphic_regions.interval_list"
+    }
+    runtime {
+        docker: container
+        cpu: select_first([runtime_set_cpu, 1])
+        gpu: false
+        memory: select_first([runtime_set_memory, 7]) + " GB"
+        disks: "local-disk " + select_first([runtime_set_disk, runtime_calculated_disk]) + if use_ssd then " SSD" else " HDD"
+        maxRetries: select_first([runtime_set_max_retries, 0])
+        preemptible: select_first([runtime_set_preemptible_tries, 5])
+        returnCodes: 0
+     }
+
+}
+
+
+##########################################################################
+## *** TASK: splitVariants ***
+##########################################################################
+## Splits multi-allelic rows without trimming alleles, then splits again
+## into separate SNP and INDEL files.
+##########################################################################
+
+task splitVariants {
+    input {
+        File ref
+        File ref_dict
+        File ref_fai
+        File input_vcf
+        File input_vcf_index
+        # runtime
+        String container
+        Int? runtime_set_preemptible_tries
+        Int? runtime_set_cpu
+        Int? runtime_set_memory
+        Int? runtime_set_disk
+        Int? runtime_set_max_retries
+        Boolean use_ssd = false
+    }
+    ## Runtime parameters
+    Float size_input_files = size(ref, "GB") + size(ref_dict, "GB") + size(ref_fai, "GB") + size(input_vcf, "GB") + size(input_vcf_index, "GB")
+    Int runtime_calculated_disk = ceil(size_input_files * 2.5)
+    Int command_mem_gb = select_first([runtime_set_memory, 4]) - 1
+    String basename = basename("~{input_vcf}", ".vcf.gz")
+    command <<<
+
+    gatk \
+    LeftAlignAndTrimVariants --java-options "-Xmx~{command_mem_gb}G" \
+    -R ~{ref} \
+    -V ~{input_vcf} \
+    -O ~{basename}_biallelic.vcf.gz \
+    --split-multi-allelics \
+    --dont-trim-alleles
+
+    gatk \
+    SplitVcfs --java-options "-Xmx~{command_mem_gb}G" \
+    -I ~{basename}_biallelic.vcf.gz \
+    --SNP_OUTPUT ~{basename}_biallelic_SNPs.vcf.gz \
+    --INDEL_OUTPUT ~{basename}_biallelic_INDELs.vcf.gz \
+    --STRICT false
+
+    >>>
+    output {
+        File output_SNPs = "~{basename}_biallelic_SNPs.vcf.gz"
+        File output_SNPs_index = "~{basename}_biallelic_SNPs.vcf.gz.tbi"
+        File output_INDELs = "~{basename}_biallelic_INDELs.vcf.gz"
+        File output_INDELs_index = "~{basename}_biallelic_INDELs.vcf.gz.tbi"
+    }
+    runtime {
+        docker: container
+        cpu: select_first([runtime_set_cpu, 1])
+        gpu: false
+        memory: select_first([runtime_set_memory, 4]) + " GB"
+        disks: "local-disk " + select_first([runtime_set_disk, runtime_calculated_disk]) + if use_ssd then " SSD" else " HDD"
+        maxRetries: select_first([runtime_set_max_retries, 0])
+        preemptible: select_first([runtime_set_preemptible_tries, 5])
+        returnCodes: 0
+     }
+}
+
+##########################################################################
+## *** TASK: hardFilter ***
+##########################################################################
+## Hard-filters input VCF file according to provided parameters.
+##########################################################################
+
+task hardFilter {
+    input {
+        File ref
+        File ref_dict
+        File ref_fai
+        File input_vcf
+        File input_vcf_index
+        String filters
+        String? optional_parameters
+        String? type
+        Boolean makeSitesOnly
+        # runtime
+        String container
+        Int? runtime_set_preemptible_tries
+        Int? runtime_set_cpu
+        Int? runtime_set_memory
+        Int? runtime_set_disk
+        Int? runtime_set_max_retries
+        Boolean use_ssd = false
+    }
+    Float size_input_files = size(ref, "GB") + size(ref_dict, "GB") + size(ref_fai, "GB") + size(input_vcf, "GB") + size(input_vcf_index, "GB")
+    Int runtime_calculated_disk = ceil(size_input_files * 2.5) + 2
+    Int command_mem_gb = select_first([runtime_set_memory, 7]) - 1
+    String basename = basename(input_vcf, ".vcf.gz")
+    String callMakesSitesOnlyVcf = if makeSitesOnly then "gatk MakeSitesOnlyVcf -I ~{basename}_hardFiltered.vcf.gz -O ~{basename}_hardFiltered_sitesOnly.vcf.gz" else ""
+    command <<<
+
+        gatk \
+        VariantFiltration --java-options "-Xmx~{command_mem_gb}G" \
+        -R ~{ref} \
+        -V ~{input_vcf} \
+        -O ~{basename}_temp.vcf.gz \
+        ~{filters} ~{optional_parameters} \
+        --verbosity ERROR
+
+        gatk \
+        SelectVariants --java-options "-Xmx~{command_mem_gb}G" \
+        -R ~{ref} \
+        -V ~{basename}_temp.vcf.gz \
+        -O ~{basename}_hardFiltered.vcf.gz \
+        --exclude-filtered
+        
+        touch ~{basename}_hardFiltered_sitesOnly.vcf.gz
+        touch ~{basename}_hardFiltered_sitesOnly.vcf.gz.tbi
+
+        ~{callMakesSitesOnlyVcf}
+
+    >>>
+    output {
+        File output_vcf = "~{basename}_hardFiltered.vcf.gz"
+        String output_vcf_string = "~{basename}_hardFiltered.vcf.gz"
+        File output_vcf_index = "~{basename}_hardFiltered.vcf.gz.tbi"
+        File output_sites_only_vcf = "~{basename}_hardFiltered_sitesOnly.vcf.gz"
+        File output_sites_only_vcf_index = "~{basename}_hardFiltered_sitesOnly.vcf.gz.tbi"
+    }
+    runtime {
+        docker: container
+        cpu: select_first([runtime_set_cpu, 1])
+        gpu: false
+        memory: select_first([runtime_set_memory, 7]) + " GB"
+        disks: "local-disk " + select_first([runtime_set_disk, runtime_calculated_disk]) + if use_ssd then " SSD" else " HDD"
+        maxRetries: select_first([runtime_set_max_retries, 0])
+        preemptible: select_first([runtime_set_preemptible_tries, 5])
+        returnCodes: 0
+     }
+}
+
+
+
+
+##########################################################################
+## *** TASK: gatherVCFs ***
+##########################################################################
+## Gathers non-overlapping VCF files into a single, sorted VCF file.
+##########################################################################
+
+task gatherVCFs {
+    input {
+        Array[File] input_vcfs
+        Array[File] input_vcfs_indexes
+        String output_vcf_title
+        String? groupName
+        # Runtime
+        String container
+        Int? runtime_set_preemptible_tries
+        Int? runtime_set_cpu
+        Int? runtime_set_memory
+        Int? runtime_set_disk
+        Int? runtime_set_max_retries
+        Boolean use_ssd = false
+    }
+    Float size_input_files = size(input_vcfs, "GB") + size(input_vcfs_indexes, "GB")
+    Int runtime_calculated_disk = ceil(size_input_files * 2.5)
+    Int command_mem_gb = select_first([runtime_set_memory, 7]) - 1
+    command <<<
+    
+            gatk \
+            GatherVcfs --java-options "-Xmx~{command_mem_gb}G" \
+            -I ~{sep=" -I " input_vcfs} \
+            --REORDER_INPUT_BY_FIRST_VARIANT
+            -O ~{output_vcf_title}.vcf.gz \
+
+
+            ## Index creation from block-compressed files not yet supported
+            ## See https://github.com/broadinstitute/picard/issues/789
+            gatk IndexFeatureFile \
+            -I ~{output_vcf_title}.vcf.gz
+
+    >>>
+    output {
+        File output_vcf = "~{output_vcf_title}.vcf.gz"
+        File output_vcf_index = "~{output_vcf_title}.vcf.gz.tbi"
+        String output_groupName = "~{groupName}"
+    }
+    runtime {
+        docker: container
+        cpu: select_first([runtime_set_cpu, 1])
+        gpu: false
+        memory: select_first([runtime_set_memory, 7]) + " GB"
         disks: "local-disk " + select_first([runtime_set_disk, runtime_calculated_disk]) + if use_ssd then " SSD" else " HDD"
         maxRetries: select_first([runtime_set_max_retries, 0])
         preemptible: select_first([runtime_set_preemptible_tries, 5])

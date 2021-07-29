@@ -1,4 +1,4 @@
-version development
+version 1.0
 
 ## Copyright Broad Institute and Wisconsin National Primate Research Center,
 ## University of Wisconsin-Madison, 2021
@@ -43,9 +43,12 @@ struct bamInfo {
 
 struct haplotypeInfo {
     String groupName
-    String title_gvcf
     String gvcf
-    String gvcf_index
+}
+
+struct polymorphicRegionsInfo {
+    String scatterName
+    String intervalList
 }
 
 struct genotypeInfo {

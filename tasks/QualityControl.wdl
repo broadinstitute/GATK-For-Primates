@@ -1,4 +1,4 @@
-version development
+version 1.0
 
 ## Copyright Broad Institute and Wisconsin National Primate Research Center,
 ## University of Wisconsin-Madison, 2021
@@ -18,6 +18,32 @@ version development
 import "../structs/structs.wdl"
 
 ##########################################################################
+## *** TASK: failWithError ***
+##########################################################################
+## Fails the workflow with the given error message written to stderr.
+##########################################################################
+
+task failWithError {
+    input {
+        String message = message
+    }
+    command <<<
+    set -euo pipefail
+
+    python <<CODE
+
+    import sys
+
+    message = "~{message}"
+
+    sys.stderr.write(message)
+    sys.exit(1)
+
+    CODE
+    >>>
+}
+
+##########################################################################
 ## *** TASK: validateVCF ***
 ##########################################################################
 ## Validates input VCF file for conformance to VCF standard.
@@ -25,9 +51,9 @@ import "../structs/structs.wdl"
 
 task validateVCF {
     input {
-        File? ref
-        File? ref_dict
-        File? ref_fai
+        File ref
+        File ref_dict
+        File ref_fai
         File? variant_file
         File? variant_file_index
         String? optional_arguments
@@ -43,7 +69,7 @@ task validateVCF {
     ## Runtime parameters
     Float size_input_files = size(ref, "GB") + size(ref_dict, "GB") + size(ref_fai, "GB") + size(variant_file, "GB") + size(variant_file_index, "GB")
     Int runtime_calculated_disk = ceil(size_input_files * 1) + 25
-    Int command_mem_gb = select_first([runtime_set_memory, 7]) - 1
+    Int command_mem_gb = select_first([runtime_set_memory, 4]) - 1
     ## Task parameters
     String reference_flag = if defined(ref) then "-R ~{ref} " else ""
     String variant_flag = if defined(variant_file) then "-V ~{variant_file} " else ""
@@ -51,21 +77,22 @@ task validateVCF {
     set -oe pipefail
 
         gatk ValidateVariants --java-options -Xmx~{command_mem_gb}G \
-        ~{reference_flag}~{variant_flag}~{optional_arguments}
+        -R ~{ref} \
+        -V ~{variant_flag} \
+        ~{optional_arguments}
 
     >>>
     runtime {
         docker: container
         cpu: select_first([runtime_set_cpu, 1])
         gpu: false
-        memory: select_first([runtime_set_memory, 7]) + " GB"
+        memory: select_first([runtime_set_memory, 4]) + " GB"
         disks: "local-disk " + select_first([runtime_set_disk, 3]) + if use_ssd then " SSD" else " HDD"
         maxRetries: select_first([runtime_set_max_retries, 0])
         preemptible: select_first([runtime_set_preemptible_tries, 5])
         returnCodes: 0
      }
 }
-
 
 ##########################################################################
 ## *** TASK: validateRecords ***
@@ -86,16 +113,7 @@ task validateRecords {
         String? bam
         String? bam_index
         String? unmapped_bam
-        # Runtime options
-        String container
-        Int? runtime_set_preemptible_tries
-        Int? runtime_set_cpu
-        Int? runtime_set_memory
-        Int? runtime_set_disk
-        Int? runtime_set_max_retries
-        Boolean use_ssd = false
     }
-
     command <<<
     set -euo pipefail
 
@@ -225,18 +243,7 @@ task validateRecords {
         String bam_indexes = "~{bam_index}"
         String unmapped_bams = "~{unmapped_bam}"
     }
-    runtime {
-        docker: container
-        cpu: select_first([runtime_set_cpu, 1])
-        gpu: false
-        memory: select_first([runtime_set_memory, 1]) + " GB"
-        disks: "local-disk " + select_first([runtime_set_disk, 10]) + if use_ssd then " SSD" else " HDD"
-        maxRetries: select_first([runtime_set_max_retries, 0])
-        preemptible: select_first([runtime_set_preemptible_tries, 5])
-        returnCodes: 0
-     }
 }
-
 
 ##########################################################################
 ## *** TASK: validateCohort ***
@@ -246,6 +253,8 @@ task validateRecords {
 
 task validateCohort {
     input {
+        Array[String] scatterNames
+        Array[String] scatterIntervals
         Array[String] groupNames
         Array[String] sampleNames
         Array[String] RG_IDs
@@ -268,6 +277,8 @@ task validateCohort {
     import sys
 
     # Import WDL arrays to Python
+    scatterName = ['~{sep="','" scatterNames}']
+    scatterInterval = ['~{sep="','" scatterIntervals}']
     groupName = ['~{sep="','" groupNames}']
     sampleName = ['~{sep="','" sampleNames}']
     RG_ID = ['~{sep="','" RG_IDs}']
@@ -280,6 +291,8 @@ task validateCohort {
     RG_LB[:] = (value for value in RG_LB if value != "NULL")
 
     # Get unique values only
+    unique_scatterNames = list(dict.fromkeys(scatterName))
+    unique_scatterIntervals = list(dict.fromkeys(scatterInterval))
     unique_groupNames = list(dict.fromkeys(groupName))
     unique_sampleNames = list(dict.fromkeys(sampleName))
     unique_RG_IDs = list(dict.fromkeys(RG_ID))
@@ -291,6 +304,16 @@ task validateCohort {
         sys.stdout.write("true")
     else:
         sys.stdout.write("false")
+
+    # Check for duplicate scatter names
+    if len(scatterName) is not len(unique_scatterNames):
+        sys.stderr.write("You appear to have duplicate scatter names. Every scatter must have a unique name.")
+        sys.exit(1)
+
+    # Check that every scatter has an interval
+    if len(scatterInterval) is not len(unique_scatterIntervals):
+        sys.stderr.write("You appear to have scatters that are missing either a name or a list of intervals. Each defined scatter must have both.")
+        sys.exit(1)
 
     # Check for duplicate sample names
     if len(sampleName) is not len(unique_sampleNames):
@@ -316,17 +339,7 @@ task validateCohort {
 
     >>>
     output {
+        Array[String] output_scatterNames = scatterNames
         Boolean multiple_taxonomic_groups = read_boolean(stdout())
     }
-    runtime {
-        docker: container
-        cpu: select_first([runtime_set_cpu, 1])
-        gpu: false
-        memory: select_first([runtime_set_memory, 1]) + " GB"
-        disks: "local-disk " + select_first([runtime_set_disk, 10]) + if use_ssd then " SSD" else " HDD"
-        maxRetries: select_first([runtime_set_max_retries, 0])
-        preemptible: select_first([runtime_set_preemptible_tries, 5])
-        returnCodes: 0
-     }
 }
-
