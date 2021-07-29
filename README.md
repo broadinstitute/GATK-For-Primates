@@ -42,7 +42,7 @@ In `final` mode, the outputs from `initial` or `repeat` mode are used as inputs,
 - Docker support
 
 ### Input requirements/expectations:
-- Cleaned-up paired-end reads in de-interleaved FASTQ format, unmapped BAM files, for 'initial' mode; mapped and de-duplicated BAM files for 'repeat' and 'final' modes.
+- Cleaned-up paired-end reads in de-interleaved FASTQ format and/or unmapped BAM files for 'initial' mode (one pair/file per sample); mapped and de-duplicated BAM files for 'repeat' and 'final' modes.
 - Read group information, either provided with the JSON input for FASTQ files, or included in uBAM or BAM files. 
 - A reference genome indexed using either bwa or bwa-mem2 (support for bwa-mem2 is coming soon).
 - Truth SNP and/or Indel sets, if available, in either uncompressed or gzip-compressed VCF format with TBI index(es).
