@@ -14,7 +14,7 @@ version 1.0
 ## - Cromwell 65
 ## - bwa 0.7.15 (note: from GITC)
 ## - Samtools 1.11 (note: from GITC)
-## - GATK 4.2.0.0 (note: GATK 4.1.8.0 is used in GITC)
+## - GATK 4.2.1.0 (note: GATK 4.1.8.0 is used in GITC)
 ## - Python 3.9.5
 ##
 ## Program versions can be changed by defining alternative containers.
