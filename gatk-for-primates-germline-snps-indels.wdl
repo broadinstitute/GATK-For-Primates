@@ -90,7 +90,7 @@ workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
         Array[scatterInfo]+ scatterList
         
         ## Define containers
-        String container_gatk = "broadinstitute/gatk:4.2.0.0"
+        String container_gatk = "broadinstitute/gatk:4.2.1.0"
         String container_gitc = "us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.5.7-2021-06-09_16-47-48Z"
         String container_python = "python:3.9.5"
 
