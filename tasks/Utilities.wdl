@@ -28,6 +28,14 @@ task unpackagePolymorphicRegions {
     input {
         String mode
         File? packaged_polymorphic_regions
+        # Runtime
+        String container
+        Int? runtime_set_preemptible_tries
+        Int? runtime_set_cpu
+        Int? runtime_set_memory
+        Int? runtime_set_disk
+        Int? runtime_set_max_retries
+        Boolean use_ssd = false
     }
     command <<<
     set -euo pipefail
@@ -65,7 +73,16 @@ task unpackagePolymorphicRegions {
         File polymorphicRegionsJSON = "polymorphicRegions.json"
         Array[File] polymorphicRegionsIntervalLists = glob("*.interval_list")
     }
-
+    runtime {
+        docker: container
+        cpu: select_first([runtime_set_cpu, 1])
+        gpu: false
+        memory: select_first([runtime_set_memory, 1]) + " GB"
+        disks: "local-disk " + select_first([runtime_set_disk, 10]) + if use_ssd then " SSD" else " HDD"
+        maxRetries: select_first([runtime_set_max_retries, 0])
+        preemptible: select_first([runtime_set_preemptible_tries, 5])
+        returnCodes: 0
+     }
 }
 
 ##########################################################################
