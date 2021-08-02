@@ -26,6 +26,14 @@ import "../structs/structs.wdl"
 task failWithError {
     input {
         String message = message
+        # Runtime options
+        String container
+        Int? runtime_set_preemptible_tries
+        Int? runtime_set_cpu
+        Int? runtime_set_memory
+        Int? runtime_set_disk
+        Int? runtime_set_max_retries
+        Boolean use_ssd = false
     }
     command <<<
     set -euo pipefail
@@ -41,6 +49,16 @@ task failWithError {
 
     CODE
     >>>
+    runtime {
+        docker: container
+        cpu: select_first([runtime_set_cpu, 1])
+        gpu: false
+        memory: select_first([runtime_set_memory, 4]) + " GB"
+        disks: "local-disk " + select_first([runtime_set_disk, 10]) + if use_ssd then " SSD" else " HDD"
+        maxRetries: select_first([runtime_set_max_retries, 0])
+        preemptible: select_first([runtime_set_preemptible_tries, 5])
+        returnCodes: 0
+     }
 }
 
 ##########################################################################
@@ -113,6 +131,14 @@ task validateRecords {
         String? bam
         String? bam_index
         String? unmapped_bam
+        # Runtime options
+        String container
+        Int? runtime_set_preemptible_tries
+        Int? runtime_set_cpu
+        Int? runtime_set_memory
+        Int? runtime_set_disk
+        Int? runtime_set_max_retries
+        Boolean use_ssd = false
     }
     command <<<
     set -euo pipefail
@@ -243,6 +269,16 @@ task validateRecords {
         String bam_indexes = "~{bam_index}"
         String unmapped_bams = "~{unmapped_bam}"
     }
+    runtime {
+        docker: container
+        cpu: select_first([runtime_set_cpu, 1])
+        gpu: false
+        memory: select_first([runtime_set_memory, 4]) + " GB"
+        disks: "local-disk " + select_first([runtime_set_disk, 10]) + if use_ssd then " SSD" else " HDD"
+        maxRetries: select_first([runtime_set_max_retries, 0])
+        preemptible: select_first([runtime_set_preemptible_tries, 5])
+        returnCodes: 0
+     }
 }
 
 ##########################################################################
@@ -342,4 +378,14 @@ task validateCohort {
         Array[String] output_scatterNames = scatterNames
         Boolean multiple_taxonomic_groups = read_boolean(stdout())
     }
+    runtime {
+        docker: container
+        cpu: select_first([runtime_set_cpu, 1])
+        gpu: false
+        memory: select_first([runtime_set_memory, 4]) + " GB"
+        disks: "local-disk " + select_first([runtime_set_disk, 10]) + if use_ssd then " SSD" else " HDD"
+        maxRetries: select_first([runtime_set_max_retries, 0])
+        preemptible: select_first([runtime_set_preemptible_tries, 5])
+        returnCodes: 0
+     }
 }
