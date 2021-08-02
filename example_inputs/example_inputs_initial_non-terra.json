@@ -1,0 +1,68 @@
+{
+  "GATKForPrimatesGermlineSNPsIndels_GATK4.mode": "initial",
+  "GATKForPrimatesGermlineSNPsIndels_GATK4.ref": "gs://gatk-contrib/GATKForPrimates/rhiRox_chr21_and_chr22_only.fa",
+  "GATKForPrimatesGermlineSNPsIndels_GATK4.ref_dict": "gs://gatk-contrib/GATKForPrimates/rhiRox_chr21_and_chr22_only.dict",
+  "GATKForPrimatesGermlineSNPsIndels_GATK4.ref_fai": "gs://gatk-contrib/GATKForPrimates/rhiRox_chr21_and_chr22_only.fa.fai",
+  "GATKForPrimatesGermlineSNPsIndels_GATK4.ref_amb": "gs://gatk-contrib/GATKForPrimates/rhiRox_chr21_and_chr22_only.fa.amb",
+  "GATKForPrimatesGermlineSNPsIndels_GATK4.ref_ann": "gs://gatk-contrib/GATKForPrimates/rhiRox_chr21_and_chr22_only.fa.ann",
+  "GATKForPrimatesGermlineSNPsIndels_GATK4.ref_pac": "gs://gatk-contrib/GATKForPrimates/rhiRox_chr21_and_chr22_only.fa.pac",
+  "GATKForPrimatesGermlineSNPsIndels_GATK4.ref_bwt": "gs://gatk-contrib/GATKForPrimates/rhiRox_chr21_and_chr22_only.fa.bwt",
+  "GATKForPrimatesGermlineSNPsIndels_GATK4.ref_sa": "gs://gatk-contrib/GATKForPrimates/rhiRox_chr21_and_chr22_only.fa.sa",
+  "GATKForPrimatesGermlineSNPsIndels_GATK4.flowcell_patterned": "true",
+  "GATKForPrimatesGermlineSNPsIndels_GATK4.merge_contigs_into_num_partitions": "0",
+  "GATKForPrimatesGermlineSNPsIndels_GATK4.sampleList": [{
+      "name": "R.bie-2011A089",
+      "RG_ID": "1",
+      "RG_LB": "R.bie-2011A089",
+      "RG_SM": "R.bie-2011A089",
+      "RG_PU": "SeqFacil",
+      "taxon_group": "bieti",
+      "R1": "gs://gatk-contrib/GATKForPrimates/R.bie-2011A089.chr21_seg.R1.fastq.gz",
+      "R2": "gs://gatk-contrib/GATKForPrimates/R.bie-2011A089.chr21_seg.R2.fastq.gz"
+    },
+    {
+      "name": "R.bie-2011A106",
+      "RG_ID": "2",
+      "RG_LB": "R.bie-2011A106",
+      "RG_SM": "R.bie-2011A106",
+      "RG_PU": "SeqFacil",
+      "taxon_group": "bieti",
+      "R1": "gs://gatk-contrib/GATKForPrimates/R.bie-2011A106.chr21_seg.R1.fastq.gz",
+      "R2": "gs://gatk-contrib/GATKForPrimates/R.bie-2011A106.chr21_seg.R2.fastq.gz"
+    },
+    {
+      "name": "R.bre-2011A082",
+      "RG_ID": "3",
+      "RG_LB": "R.bre-2011A082",
+      "RG_SM": "R.bre-2011A082",
+      "RG_PU": "SeqFacil",
+      "taxon_group": "brelichi",
+      "R1": "gs://gatk-contrib/GATKForPrimates/R.bre-2011A082.chr21_seg.R1.fastq.gz",
+      "R2": "gs://gatk-contrib/GATKForPrimates/R.bre-2011A082.chr21_seg.R2.fastq.gz"
+    },
+    {
+      "name": "R.bre-2011A084",
+      "RG_ID": "4",
+      "RG_LB": "R.bre-2011A084",
+      "RG_SM": "R.bre-2011A084",
+      "RG_PU": "SeqFacil",
+      "taxon_group": "brelichi",
+      "R1": "gs://gatk-contrib/GATKForPrimates/R.bre-2011A084.chr21_seg.R1.fastq.gz",
+      "R2": "gs://gatk-contrib/GATKForPrimates/R.bre-2011A084.chr21_seg.R2.fastq.gz"
+    }
+  ],
+
+  "GATKForPrimatesGermlineSNPsIndels_GATK4.scatterList": [{
+      "name": "scatter1",
+      "intervals": "chr21:1-27800000"
+    },
+    {
+      "name": "scatter2",
+      "intervals": "chr21:27800001-55600000"
+    },
+    {
+      "name": "scatter3",
+      "intervals": "chr21:55600001-81002553"
+    }
+  ]
+}
