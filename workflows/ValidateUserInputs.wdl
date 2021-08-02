@@ -53,7 +53,7 @@ workflow validateUserInputs {
     if ((mode != "initial") && (mode != "repeat") && (mode != "final")) {
         call QC.failWithError as failWrongMode {
             input:
-                message = "Input mode must be either 'initial', 'repeat' or 'final'."
+                message = "Input mode must be either 'initial', 'repeat' or 'final'.",
                 # Runtime options
                 container = container_python,
         }
@@ -67,7 +67,7 @@ workflow validateUserInputs {
     if ((mode != "initial") && (!defined(packaged_polymorphic_regions))) {
         call QC.failWithError as failMissingPackage {
             input:
-                message = "Packaged polymorphic regions from 'initial' mode must be provided in 'repeat' or 'final' modes."
+                message = "Packaged polymorphic regions from 'initial' mode must be provided in 'repeat' or 'final' modes.",
                 # Runtime options
                 container = container_python,
         }
