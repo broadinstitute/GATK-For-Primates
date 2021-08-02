@@ -78,6 +78,8 @@ workflow validateUserInputs {
         input:
             mode = mode,
             packaged_polymorphic_regions = packaged_polymorphic_regions,
+            # Runtime options
+            container = container_python,
     }
 
     ##########################################################################
