@@ -79,6 +79,14 @@ task mapFromPairedFASTQ {
         File? R1
         File? R2
         String execute_aligner
+        String? RG_CN
+        String? RG_DS
+        String? RG_DT
+        String? RG_FO
+        String? RG_KS
+        String? RG_PG
+        String? RG_PI
+        String? RG_PM
         # Runtime options
         String container
         String path_to_gitc
@@ -93,10 +101,20 @@ task mapFromPairedFASTQ {
     Float size_input_files = size(ref, "GB") + size(ref_dict, "GB") + size(ref_fai, "GB") + size(ref_idxs, "GB") + size(R1, "GB") + size(R2, "GB")
     Int runtime_calculated_disk = ceil(size_input_files * 2.5)
     Int command_mem_gb = select_first([runtime_set_memory, 10]) - 1
+    ## Task-specific parameters
+    String is_RG_CN = if defined(RG_CN) then "\tCN:~{RG_CN}" else ""
+    String is_RG_DS = if defined(RG_DS) then "\tDS:~{RG_DS}" else ""
+    String is_RG_DT = if defined(RG_DT) then "\tDT:~{RG_DT}" else ""
+    String is_RG_FO = if defined(RG_FO) then "\tFO:~{RG_FO}" else ""
+    String is_RG_KS = if defined(RG_KS) then "\tKS:~{RG_KS}" else ""
+    String is_RG_PG = if defined(RG_PG) then "\tPG:~{RG_PG}" else ""
+    String is_RG_PI = if defined(RG_PI) then "\tPI:~{RG_PI}" else ""
+    String is_RG_PM = if defined(RG_PM) then "\tPM:~{RG_PM}" else ""
+    String optional_read_groups = "~{is_RG_CN}~{is_RG_DS}~{is_RG_DT}~{is_RG_FO}~{is_RG_KS}~{is_RG_PG}~{is_RG_PI}~{is_RG_PM}"
     command <<<
     set -euo pipefail
 
-        ~{path_to_gitc}~{execute_aligner} -R "@RG\tID:~{RG_ID}\tPL:ILLUMINA\tPU:~{RG_PU}\tLB:~{RG_LB}\tSM:~{RG_SM}" ~{ref} ~{R1} ~{R2} | samtools view -bt ~{ref_fai} -1 - > ~{sampleName}_mapped_unsorted.bam
+        ~{path_to_gitc}~{execute_aligner} -R "@RG\tID:~{RG_ID}\tPL:ILLUMINA\tPU:~{RG_PU}\tLB:~{RG_LB}\tSM:~{RG_SM}~{optional_read_groups}" ~{ref} ~{R1} ~{R2} | samtools view -bt ~{ref_fai} -1 - > ~{sampleName}_mapped_unsorted.bam
         samtools sort -n -o ~{sampleName}_mapped.bam ~{sampleName}_mapped_unsorted.bam
 
     >>>
