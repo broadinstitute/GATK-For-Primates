@@ -140,7 +140,7 @@ workflow validateUserInputs {
         String unmapped_bam = if defined(sample.unmapped_bam) then "~{sample.unmapped_bam}" else "NULL"
     }
 
-    call test.test as test {
+    call QC.validateRecords as validateRecords {
         input:
             groupNames = groupName,
             sampleNames = sampleName,
