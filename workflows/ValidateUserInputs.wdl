@@ -54,6 +54,8 @@ workflow validateUserInputs {
         call QC.failWithError as failWrongMode {
             input:
                 message = "Input mode must be either 'initial', 'repeat' or 'final'."
+                # Runtime options
+                container = container_python,
         }
     }
 
@@ -66,6 +68,8 @@ workflow validateUserInputs {
         call QC.failWithError as failMissingPackage {
             input:
                 message = "Packaged polymorphic regions from 'initial' mode must be provided in 'repeat' or 'final' modes."
+                # Runtime options
+                container = container_python,
         }
     }
 
@@ -135,6 +139,8 @@ workflow validateUserInputs {
                 bam = if defined(sample.bam) then sample.bam else "NULL",
                 bam_index = if defined(sample.bam_index) then sample.bam_index else "NULL",
                 unmapped_bam = if defined(sample.unmapped_bam) then sample.unmapped_bam else "NULL",
+                # Runtime options
+                container = container_python,
         }
     }
 
