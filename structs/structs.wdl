@@ -27,6 +27,14 @@ struct sampleInfo {
     File? unmapped_bam
     File? bam
     File? bam_index
+    String? RG_CN
+    String? RG_DS
+    String? RG_DT
+    String? RG_FO
+    String? RG_KS
+    String? RG_PG
+    String? RG_PI
+    String? RG_PM
 }
 
 struct scatterInfo {
