@@ -127,17 +127,17 @@ workflow validateUserInputs {
     ##########################################################################
 
     scatter (sample in sampleList) {
-        String groupName = if defined(sample.taxon_group) then sample.taxon_group else "NULL"
-        String sampleName = if defined(sample.name) then sample.name else "NULL"
-        String R1 = if defined(sample.R1) then "~{sample.R1}" else "NULL"
-        String R2 = if defined(sample.R2) then "~{sample.R2}" else "NULL"
-        String RG_ID = if defined(sample.RG_ID) then "~{sample.RG_ID}" else "NULL"
-        String RG_SM = if defined(sample.RG_SM) then "~{sample.RG_SM}" else "NULL"
-        String RG_LB = if defined(sample.RG_LB) then "~{sample.RG_LB}" else "NULL"
-        String RG_PU = if defined(sample.RG_PU) then "~{sample.RG_PU}" else "NULL"
-        String bam = if defined(sample.bam) then "~{sample.bam}" else "NULL"
-        String bam_index = if defined(sample.bam_index) then "~{sample.bam_index}" else "NULL"
-        String unmapped_bam = if defined(sample.unmapped_bam) then "~{sample.unmapped_bam}" else "NULL"
+        String groupName = if (defined(sample.taxon_group) && (sample.taxon_group != "")) then sample.taxon_group else "NULL"
+        String sampleName = if (defined(sample.name) && (sample.name != "")) then sample.name else "NULL"
+        String R1 = if (defined(sample.R1) && (sample.R1 != "")) then "~{sample.R1}" else "NULL"
+        String R2 = if (defined(sample.R2) && (sample.R2 != "")) then "~{sample.R2}" else "NULL"
+        String RG_ID = if (defined(sample.RG_ID) && (sample.RG_ID != "")) then "~{sample.RG_ID}" else "NULL"
+        String RG_SM = if (defined(sample.RG_SM) && (sample.RG_SM != "")) then "~{sample.RG_SM}" else "NULL"
+        String RG_LB = if (defined(sample.RG_LB) && (sample.RG_LB != "")) then "~{sample.RG_LB}" else "NULL"
+        String RG_PU = if (defined(sample.RG_PU) && (sample.RG_PU != "")) then "~{sample.RG_PU}" else "NULL"
+        String bam = if (defined(sample.bam) && (sample.bam != "")) then "~{sample.bam}" else "NULL"
+        String bam_index = if (defined(sample.bam_index) && (sample.bam_index != "")) then "~{sample.bam_index}" else "NULL"
+        String unmapped_bam = if (defined(sample.unmapped_bam) && (sample.unmapped_bam != "")) then "~{sample.unmapped_bam}" else "NULL"
     }
 
     call QC.validateRecords as validateRecords {
