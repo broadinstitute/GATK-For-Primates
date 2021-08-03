@@ -167,7 +167,7 @@ task mapFromUnmappedBAM {
     set -euo pipefail
 
         ~{path_to_gitc_gatk}gatk SamToFastq --java-options "-Xmx~{command_mem_gb}G" \
-        -I ~{unmapped_bam}.bam \
+        -I ~{unmapped_bam} \
         -F /dev/stdout \
         --INTERLEAVE true \
         --INCLUDE_NON_PF_READS true \
@@ -226,16 +226,16 @@ task mergeMappedAndUnmapped {
     command <<<
     set -euo pipefail
 
-        gatk MergeBamAlignment --java-options "-Xmx~{command_mem_gb}G" \ 
+        gatk MergeBamAlignment --java-options "-Xmx~{command_mem_gb}G" \
         --VALIDATION_STRINGENCY SILENT \
         --EXPECTED_ORIENTATIONS FR \
         --ATTRIBUTES_TO_RETAIN X0 \
-        --ALIGNED_BAM ~{sampleName}_mapped_unmerged.bam \
+        --ALIGNED_BAM ~{mapped_unmerged_bam} \
         --UNMAPPED_BAM ~{unmapped_bam} \
         --OUTPUT ~{sampleName}_mapped_and_merged.bam \
         --REFERENCE_SEQUENCE ~{ref} \
         --PAIRED_RUN true \
-        --SORT_ORDER "unsorted" \
+        --SORT_ORDER unsorted \
         --IS_BISULFITE_SEQUENCE false \
         --ALIGNED_READS_ONLY false \
         --CLIP_ADAPTERS false \
