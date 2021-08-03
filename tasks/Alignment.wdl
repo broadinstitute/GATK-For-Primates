@@ -39,7 +39,7 @@ task getBwaVersion {
 
         # Not setting "set -o pipefail" here because /bwa has a rc=1 and we don't want to allow rc=1 to succeed 
         # because the sed may also fail with that error and that is something we actually want to fail on.
-        ${path_to_gitc}bwa 2>&1 | \
+        ~{path_to_gitc}bwa 2>&1 | \
         grep -e '^Version' | \
         sed 's/Version: //'
 
@@ -166,8 +166,8 @@ task mapFromUnmappedBAM {
     command <<<
     set -euo pipefail
 
-        ${path_to_gitc_gatk}gatk SamToFastq --java-options "-Xmx~{command_mem_gb}G" \
-        -I ${unmappedBam}.bam \
+        ~{path_to_gitc_gatk}gatk SamToFastq --java-options "-Xmx~{command_mem_gb}G" \
+        -I ~{unmapped_bam}.bam \
         -F /dev/stdout \
         --INTERLEAVE true \
         --INCLUDE_NON_PF_READS true \
@@ -245,7 +245,7 @@ task mergeMappedAndUnmapped {
         --PRIMARY_ALIGNMENT_STRATEGY MostDistant \
         --PROGRAM_RECORD_ID "bwamem" \
         --PROGRAM_GROUP_VERSION "~{bwa_version}" \
-        --PROGRAM_GROUP_COMMAND_LINE "~{execute_aligner} ${ref}" \
+        --PROGRAM_GROUP_COMMAND_LINE "~{execute_aligner} ~{ref}" \
         --PROGRAM_GROUP_NAME "bwamem" \
         --UNMAPPED_READ_STRATEGY COPY_TO_TAG \
         --ALIGNER_PROPER_PAIR_FLAGS true \
