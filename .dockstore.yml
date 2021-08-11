@@ -1,14 +1,12 @@
 version: 1.2
 workflows:
-   - name: GATK-For-Primates
+   - name: GATK-For-Primates-on-Terra
      subclass: WDL
-     primaryDescriptorPath: /gatk-for-primates-germline-snps-indels.wdl
+     primaryDescriptorPath: /terra-runner.wdl
      testParameterFiles:
-     -  /example_inputs_initial.json
-        /example_inputs_initial_bam.json
-        /example_inputs_repeat.json
-        /example_inputs_repeat_bam.json
-        /example_inputs_final_no_truth_sets.json
+     -  /example_inputs/example_inputs_terra_initial.json
+        /example_inputs/example_inputs_terra_repeat.json
+        /example_inputs/example_inputs_terra_final_no_truth_sets.json
      authors:
        - name: Graham L Banes
          orcid: https://orcid.org/0000-0003-4382-7684

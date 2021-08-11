@@ -120,29 +120,43 @@ workflow validateUserInputs {
         }
     }
 
+
     ##########################################################################
     ## Validate user-provided data for each sample record
     ## Validation prevents computationally expensive failures later on!
     ##########################################################################
 
     scatter (sample in sampleList) {
-        call QC.validateRecords as validateRecords {
-            input:
-                groupName = if defined(sample.taxon_group) then sample.taxon_group else "NULL",
-                sampleName = if defined(sample.name) then sample.name else "NULL",
-                R1 = if defined(sample.R1) then sample.R1 else "NULL",
-                R2 = if defined(sample.R2) then sample.R2 else "NULL",
-                RG_ID = if defined(sample.RG_ID) then sample.RG_ID else "NULL",
-                RG_SM = if defined(sample.RG_SM) then sample.RG_SM else "NULL",
-                RG_LB = if defined(sample.RG_LB) then sample.RG_LB else "NULL",
-                RG_PU = if defined(sample.RG_PU) then sample.RG_PU else "NULL",
-                bam = if defined(sample.bam) then sample.bam else "NULL",
-                bam_index = if defined(sample.bam_index) then sample.bam_index else "NULL",
-                unmapped_bam = if defined(sample.unmapped_bam) then sample.unmapped_bam else "NULL",
-                # Runtime options
-                container = container_python,
-        }
+        String groupName = if (defined(sample.taxon_group) && (sample.taxon_group != "")) then sample.taxon_group else "NULL"
+        String sampleName = if (defined(sample.name) && (sample.name != "")) then sample.name else "NULL"
+        String R1 = if (defined(sample.R1) && (sample.R1 != "")) then "~{sample.R1}" else "NULL"
+        String R2 = if (defined(sample.R2) && (sample.R2 != "")) then "~{sample.R2}" else "NULL"
+        String RG_ID = if (defined(sample.RG_ID) && (sample.RG_ID != "")) then "~{sample.RG_ID}" else "NULL"
+        String RG_SM = if (defined(sample.RG_SM) && (sample.RG_SM != "")) then "~{sample.RG_SM}" else "NULL"
+        String RG_LB = if (defined(sample.RG_LB) && (sample.RG_LB != "")) then "~{sample.RG_LB}" else "NULL"
+        String RG_PU = if (defined(sample.RG_PU) && (sample.RG_PU != "")) then "~{sample.RG_PU}" else "NULL"
+        String bam = if (defined(sample.bam) && (sample.bam != "")) then "~{sample.bam}" else "NULL"
+        String bam_index = if (defined(sample.bam_index) && (sample.bam_index != "")) then "~{sample.bam_index}" else "NULL"
+        String unmapped_bam = if (defined(sample.unmapped_bam) && (sample.unmapped_bam != "")) then "~{sample.unmapped_bam}" else "NULL"
     }
+
+    call QC.validateRecords as validateRecords {
+        input:
+            groupNames = groupName,
+            sampleNames = sampleName,
+            R1s = R1,
+            R2s = R2,
+            RG_IDs = RG_ID,
+            RG_SMs = RG_SM,
+            RG_LBs = RG_LB,
+            RG_PUs = RG_PU,
+            bams = bam,
+            bam_indexes = bam_index,
+            unmapped_bams = unmapped_bam,
+            # Runtime options
+            container = container_python,
+    }
+    
 
     ##########################################################################
     ## Validate user-provided data across the cohort
@@ -150,19 +164,19 @@ workflow validateUserInputs {
     ##########################################################################
 
     scatter (scttr in scatterList) {
-        String loop_scatterNames = scttr.name
-        String loop_scatterIntervals = scttr.intervals
+        String scatterName = scttr.name
+        String scatterInterval = scttr.intervals
     }
 
     call QC.validateCohort as validateCohort {
         input:
-            scatterNames = loop_scatterNames,
-            scatterIntervals = loop_scatterIntervals,
-            groupNames = validateRecords.groupNames,
-            sampleNames = validateRecords.sampleNames,
-            RG_IDs = validateRecords.RG_IDs,
-            RG_SMs = validateRecords.RG_SMs,
-            RG_LBs = validateRecords.RG_LBs,
+            scatterNames = scatterName,
+            scatterIntervals = scatterInterval,
+            groupNames = groupName,
+            sampleNames = sampleName,
+            RG_IDs = RG_ID,
+            RG_SMs = RG_SM,
+            RG_LBs = RG_LB,
             container = container_python,
     }
 
@@ -174,12 +188,10 @@ workflow validateUserInputs {
     output {
         File polymorphic_regions_json = unpackagePolymorphicRegions.polymorphicRegionsJSON
         Array[File] polymorphicRegionsIntervalLists = unpackagePolymorphicRegions.polymorphicRegionsIntervalLists
-        Array[String] groupNames = select_all(validateRecords.groupNames)
-        Array[String] sampleNames = select_all(validateRecords.sampleNames)
-        Array[String] bams = select_all(validateRecords.bams)
-        Array[String] bam_indexes = select_all(validateRecords.bam_indexes)
-        Array[String] unmapped_bams = select_all(validateRecords.unmapped_bams)
-        Array[String] scatterNames = select_all(validateCohort.output_scatterNames)
+        Array[String] groupNames = groupName
+        Array[String] sampleNames = sampleName
+        Array[String] bams = bam
+        Array[String] bam_indexes = bam_index
         Boolean multiple_taxonomic_groups = validateCohort.multiple_taxonomic_groups
     }
 

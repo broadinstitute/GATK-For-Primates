@@ -113,12 +113,177 @@ task validateVCF {
 }
 
 ##########################################################################
-## *** TASK: validateRecords ***
+## *** TASK: validateRecordsOld ***
 ##########################################################################
 ## Checks for errors in input variables provided for each sample.
 ##########################################################################
 
 task validateRecords {
+    input {
+        Array[String] groupNames
+        Array[String] sampleNames
+        Array[String] R1s
+        Array[String] R2s
+        Array[String] RG_IDs
+        Array[String] RG_SMs
+        Array[String] RG_LBs
+        Array[String] RG_PUs
+        Array[String] bams
+        Array[String] bam_indexes
+        Array[String] unmapped_bams
+        # Runtime options
+        String container
+        Int? runtime_set_preemptible_tries
+        Int? runtime_set_cpu
+        Int? runtime_set_memory
+        Int? runtime_set_disk
+        Int? runtime_set_max_retries
+        Boolean use_ssd = false
+    }
+    command <<<
+    set -euo pipefail
+
+    python <<CODE
+
+    import sys
+
+    # Import WDL arrays to Python
+    groupName = ['~{sep="','" groupNames}']
+    sampleName = ['~{sep="','" sampleNames}']
+    R1 = ['~{sep="','" R1s}']
+    R2 = ['~{sep="','" R2s}']
+    RG_ID = ['~{sep="','" RG_IDs}']
+    RG_SM = ['~{sep="','" RG_SMs}']
+    RG_LB = ['~{sep="','" RG_LBs}']
+    RG_PU = ['~{sep="','" RG_PUs}']
+    bam = ['~{sep="','" bams}']
+    bam_index = ['~{sep="','" bam_indexes}']
+    unmapped_bam = ['~{sep="','" unmapped_bams}']
+   
+    # Check that all arrays are the same length
+    length = len(groupName)
+    if all(len(lst) != length for lst in [sampleName, R1, R2, RG_ID, RG_SM, RG_LB, RG_PU, bam, bam_index, unmapped_bam]):
+        sys.stderr.write("WDL arrays imported to Python are not all the same length.")
+        sys.exit(1)
+
+    for i in range(length):
+
+       # If no groupName is provided
+        if groupName[i] == "NULL":
+            sys.stderr.write("At least one sample is missing a 'taxon_group' input variable.")
+            sys.exit(1)
+        else:
+            # If groupName matches 'cohort'
+            if groupName[i].casefold() == "cohort":
+                sys.stderr.write("The taxon_group 'Cohort' is reserved for use by the workflow.")
+                sys.exit(1)
+
+        # If no sampleName is provided
+        if sampleName[i] == "NULL":
+            sys.stderr.write("At least one sample is missing a 'name' input variable.")
+            sys.exit(1)
+
+        # If unmapped_bam is provided
+        if unmapped_bam[i] != "NULL":
+            if R1[i] != "NULL":
+                sys.stderr.write("You must provide either FASTQ reads (i.e. R1 and R2) or an 'unmapped_bam', but not both.")
+                sys.exit(1)
+            if R2[i] != "NULL":
+                sys.stderr.write("You must provide either FASTQ reads (i.e. R1 and R2) or an 'unmapped_bam', but not both.")
+                sys.exit(1)
+            if RG_ID[i] != "NULL":
+                sys.stderr.write("Read group information (i.e. RG_ID) cannot be provided alongside an 'unmapped_bam'. Ensure all read group information is contained within the bam file.")
+                sys.exit(1)
+            if RG_SM[i] != "NULL":
+                sys.stderr.write("Read group information (i.e. RG_SM) cannot be provided alongside an 'unmapped_bam'. Ensure all read group information is contained within the bam file.")
+                sys.exit(1)
+            if RG_LB[i] != "NULL":
+                sys.stderr.write("Read group information (i.e. RG_LB) cannot be provided alongside an 'unmapped_bam'. Ensure all read group information is contained within the bam file.")
+                sys.exit(1)
+            if RG_PU[i] != "NULL":
+                sys.stderr.write("Read group information (i.e. RG_PU) cannot be provided alongside an 'unmapped_bam'. Ensure all read group information is contained within the bam file.")
+                sys.exit(1)
+            if bam[i] != "NULL":
+                sys.stderr.write("You must provide either a mapped bam (i.e. 'bam') or an 'unmapped_bam', but not both.")
+                sys.exit(1)
+            if bam_index[i] != "NULL":
+                sys.stderr.write("You must provide either a mapped bam index (i.e. 'bam_index') or an 'unmapped_bam', but not both.")
+                sys.exit(1)
+
+        # If bam is provided
+        if bam[i] != "NULL":
+            if bam_index[i] == "NULL":
+                sys.stderr.write("You must provide a bam_index for each bam file.")
+                sys.exit(1)
+            if R1[i] != "NULL":
+                sys.stderr.write("You must provide either FASTQ reads (i.e. R1 and R2) or a mapped 'bam', but not both.")
+                sys.exit(1)
+            if R2[i] != "NULL":
+                sys.stderr.write("You must provide either FASTQ reads (i.e. R1 and R2) or a mapped 'bam', but not both.")
+                sys.exit(1)
+            if RG_ID[i] != "NULL":
+                sys.stderr.write("Read group information (i.e. RG_ID) cannot be provided alongside a 'bam'. Ensure all read group information is contained within the bam file.")
+                sys.exit(1)
+            if RG_SM[i] != "NULL":
+                sys.stderr.write("Read group information (i.e. RG_SM) cannot be provided alongside a 'bam'. Ensure all read group information is contained within the bam file.")
+                sys.exit(1)
+            if RG_LB[i] != "NULL":
+                sys.stderr.write("Read group information (i.e. RG_LB) cannot be provided alongside a 'bam'. Ensure all read group information is contained within the bam file.")
+                sys.exit(1)
+            if RG_PU[i] != "NULL":
+                sys.stderr.write("Read group information (i.e. RG_PU) cannot be provided alongside a 'bam'. Ensure all read group information is contained within the bam file.")
+                sys.exit(1)
+
+        # If only one FASTQ is provided
+        if R1[i] != "NULL":
+            if R2[i] == "NULL":
+                sys.stderr.write("You must provide both an R1 and an R2 as paired-end non-interleaved inputs.")
+                sys.exit(1)
+        if R2[i] != "NULL":
+            if R1[i] == "NULL":
+                sys.stderr.write("You must provide both an R1 and an R2 as paired-end non-interleaved inputs.")
+                sys.exit(1)
+
+        # If FASTQ files are provided
+        if R1[i] != "NULL":
+            if RG_ID[i] == "NULL":
+                sys.stderr.write("Read group information (i.e. RG_ID) must be provided alongside FASTQ reads.")
+                sys.exit(1)
+
+            if RG_SM[i] == "NULL":
+                sys.stderr.write("Read group information (i.e. RG_ID) must be provided alongside FASTQ reads.")
+                sys.exit(1)
+
+            if RG_LB[i] == "NULL":
+                sys.stderr.write("Read group information (i.e. RG_ID) must be provided alongside FASTQ reads.")
+                sys.exit(1)
+
+            if RG_PU[i] == "NULL":
+                sys.stderr.write("Read group information (i.e. RG_ID) must be provided alongside FASTQ reads.")
+                sys.exit(1)
+
+    CODE
+    >>>
+
+    runtime {
+        docker: container
+        cpu: select_first([runtime_set_cpu, 1])
+        gpu: false
+        memory: select_first([runtime_set_memory, 4]) + " GB"
+        disks: "local-disk " + select_first([runtime_set_disk, 10]) + if use_ssd then " SSD" else " HDD"
+        maxRetries: select_first([runtime_set_max_retries, 0])
+        preemptible: select_first([runtime_set_preemptible_tries, 5])
+        returnCodes: 0
+     }
+}
+
+##########################################################################
+## *** TASK: validateRecordsOld ***
+##########################################################################
+## Checks for errors in input variables provided for each sample.
+##########################################################################
+
+task validateRecordsOld {
     input {
         String groupName
         String sampleName
@@ -375,7 +540,6 @@ task validateCohort {
 
     >>>
     output {
-        Array[String] output_scatterNames = scatterNames
         Boolean multiple_taxonomic_groups = read_boolean(stdout())
     }
     runtime {
