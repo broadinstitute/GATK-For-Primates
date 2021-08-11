@@ -42,17 +42,17 @@ workflow GATKForPrimatesOnTerra {
 
     input {
 
-        ## Collect workflow mode from input JSON
+        ## Collect workflow mode from Terra
         String mode # options: initial / repeat / final
  
-        ## Collect optional variables from input JSON
+        ## Collect optional variables from Terra
         Boolean validate_truth_sets = true # options: true / false; if false this will disable running ValidateVariants on truth sets in 'Final' mode
         Boolean flowcell_patterned = true # options: true / false; this influences pixel distance when marking duplicates
         Int? merge_contigs_into_num_partitions # options: optional parameter for GenomicsDBImport
         Boolean bwamem2 = false # options: true / false; indicating bwa (as bwa mem) or bwamem2 (as bwamem2 mem) ***-Coming-Soon-***
         Boolean cram_not_bam = true # options: true / false; if false this will disable use of CRAM instead of BAM format
 
-        ## Collect reference files from input JSON
+        ## Collect reference files from Terra
         File ref
         File ref_dict
         File ref_fai
@@ -64,18 +64,20 @@ workflow GATKForPrimatesOnTerra {
         File? ref_0123
         File? ref_bwt_2bit_64
 
+        ## Collect scatterList JSON file from Terra
+        File scatterList_json
+
         ## Collect .tar.gz of packaged interval lists from 'initial' mode
         File? packaged_polymorphic_regions
 
-        ## Collect truth sets from input JSON
+        ## Collect truth sets from Terra
         File? truth_set_SNPs # options: optional SNP truth set (sites-only VCF file) for VQSR (training set is produced via hard filtering)
         File? truth_set_SNPs_index # index for the above
         File? truth_set_INDELs # options: optional INDEL truth set (sites-only VCF file) for VQSR (training set is produced via hard filtering)
         File? truth_set_INDELs_index # index for the above
         
-        ## Define arrays from input JSON; definitions are in the structs/structs.wdl file
-        ##Array[sampleInfo]+ sampleList
-        Array[scatterInfo]+ scatterList
+        ## Define arrays from input JSONs; definitions are in the structs/structs.wdl file
+        Array[scatterInfo]+ scatterList = read_json(scatterList_json)
         
         ## Define containers
         String container_gatk = "broadinstitute/gatk:4.2.0.0"
