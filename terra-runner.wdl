@@ -3,6 +3,13 @@ version 1.0
 ## Copyright Broad Institute and Wisconsin National Primate Research Center,
 ## University of Wisconsin-Madison, 2021
 ## 
+##########################################################################
+## TAKE NOTE: This WDL acts as a wrapper for the 'GATK for Primates'
+## pipeline to run on Terra (https://terra.bio). You should not use this
+## WDL to run the pipeline anywhere else: it will fail! Instead, use:
+## gatk-for-primates-germline-snps-indels.wdl
+##########################################################################
+##
 ## Complete germline short variant discovery pipeline optimized for
 ## non-human primates, following proposed GATK Best Practices for
 ## Non-Human Animal Genomes.
@@ -11,14 +18,14 @@ version 1.0
 ## documentation at: https://github.com/broadinstitute/GATK-For-Primates
 ##
 ## Software version requirements :
-## - Cromwell 65
+## - Cromwell 66
 ## - bwa 0.7.15 (note: from GITC)
 ## - Samtools 1.11 (note: from GITC)
 ## - GATK 4.2.1.0 (note: GATK 4.1.8.0 is used in GITC)
 ## - Python 3.9.5
 ##
 ## Program versions can be changed by defining alternative containers.
-## Runtime parameters are optimized for Terra (https://www.terra.bio/)
+## Runtime parameters are optimized for Terra (https://terra.bio/)
 ##
 ## LICENSING : 
 ## This script is released under the WDL source code license (BSD-3) (see LICENSE in 
@@ -80,7 +87,7 @@ workflow GATKForPrimatesOnTerra {
         Array[scatterInfo]+ scatterList = read_json(scatterList_json)
         
         ## Define containers
-        String container_gatk = "broadinstitute/gatk:4.2.0.0"
+        String container_gatk = "broadinstitute/gatk:4.2.1.0"
         String container_gitc = "us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.5.7-2021-06-09_16-47-48Z"
         String container_python = "python:3.9.5"
 
@@ -168,7 +175,6 @@ workflow GATKForPrimatesOnTerra {
             path_to_gitc = path_to_gitc,
             path_to_gitc_gatk = path_to_gitc_gatk,
     }
-
     
     output {
         ## Outputs from Terra runner:
@@ -193,8 +199,6 @@ workflow GATKForPrimatesOnTerra {
     }
     
 }
-
-
 
 ##########################################################################
 ## *** TASK: generateSampleJSONforTerra ***
@@ -391,12 +395,10 @@ task generateSampleJSONforTerra {
         if obj[i]["RG_PM"] == "NULL" or obj[i]["RG_PM"] == "":
             obj[i].pop("RG_PM")    
 
-
     with open('terraInputs.txt', 'w') as outfile:
         json.dump(obj, outfile, sort_keys=True, indent=4)
 
     CODE
-
 
     >>>
     output {
