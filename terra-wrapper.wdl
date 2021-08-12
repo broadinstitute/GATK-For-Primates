@@ -59,6 +59,10 @@ workflow GATKForPrimatesOnTerra {
         Boolean bwamem2 = false # options: true / false; indicating bwa (as bwa mem) or bwamem2 (as bwamem2 mem) ***-Coming-Soon-***
         Boolean cram_not_bam = true # options: true / false; if false this will disable use of CRAM instead of BAM format
 
+        ## Collect Terra workspace and project information
+        String workspace_name
+        String terra_project
+
         ## Collect reference files from Terra
         File ref
         File ref_dict
@@ -174,12 +178,30 @@ workflow GATKForPrimatesOnTerra {
             container_python = container_python,
             path_to_gitc = path_to_gitc,
             path_to_gitc_gatk = path_to_gitc_gatk,
-            running_on_terra = true,
     }
     
+    call collectTerraOutputs {
+        input:
+            recalibrated_bam = gatkForPrimates.recalibrated_bam,
+            recalibrated_bam_index = gatkForPrimates.recalibrated_bam_index,
+            table_before = gatkForPrimates.table_before,
+            table_after = gatkForPrimates.table_after,
+            plots = gatkForPrimates.plots,
+    }
+
+    call upsertToTerra {
+        input:
+            tsv_file = collectTerraOutputs.tsv_to_upsert,
+            workspace_name = workspace_name,
+            terra_project = terra_project
+    }
+
     output {
         ## Outputs from Terra wrapper:
         File? terraJSON = generateSampleJSONforTerra.file
+        File tsv_to_upsert = collectTerraOutputs.tsv_to_upsert
+        File? upsert_json = upsertToTerra.upsert_json
+
         ## Outputs from initial mode:
         File? polymorphic_sites_JSON = gatkForPrimates.polymorphic_sites_JSON
         File? polymorphic_sites_tar = gatkForPrimates.polymorphic_sites_tar
@@ -192,10 +214,10 @@ workflow GATKForPrimatesOnTerra {
         Array[File]? table_after = gatkForPrimates.table_after
         Array[File]? plots = gatkForPrimates.plots
         ## Outputs from final mode
-        #File? finalGenotypes = mergeFinalGenotypes.output_merged_vcf
-        #File? finalGenotypesIndex = mergeFinalGenotypes.output_merged_vcf_index
-        #File? finalCallset = gatherFinalCallset.output_vcf
-        #File? finalCallsetIndex = gatherFinalCallset.output_vcf_index
+        File? finalGenotypes = mergeFinalGenotypes.output_merged_vcf
+        File? finalGenotypesIndex = mergeFinalGenotypes.output_merged_vcf_index
+        File? finalCallset = gatherFinalCallset.output_vcf
+        File? finalCallsetIndex = gatherFinalCallset.output_vcf_index
 
     }
     
@@ -410,6 +432,78 @@ task generateSampleJSONforTerra {
         cpu: select_first([runtime_set_cpu, 1])
         gpu: false
         memory: select_first([runtime_set_memory, 1]) + " GB"
+        disks: "local-disk " + select_first([runtime_set_disk, 10]) + if use_ssd then " SSD" else " HDD"
+        maxRetries: select_first([runtime_set_max_retries, 0])
+        preemptible: select_first([runtime_set_preemptible_tries, 5])
+        returnCodes: 0
+     }
+}
+
+##########################################################################
+## *** TASK: collectTerraOutputs ***
+##########################################################################
+## Creates a TSV of sample outputs.
+##########################################################################
+
+task collectTerraOutputs {
+    input {
+        Array[String] recalibrated_bam
+        Array[String] recalibrated_bam_index
+        Array[String] table_before
+        Array[String] table_after
+        Array[String] plots
+    }
+
+    command <<<
+        # create header line in final output load file
+        echo -e "entity:recalibrated_bam\trecalibrated_bam_index\ttable_before\ttable_after\t\plots" > tsv_to_upsert.tsv
+
+        # create the row for the flowcell and append to final output load file
+        echo -e "['"'~{sep='","' recalibrated_bam}'"']\t[~{sep="," recalibrated_bam_index}]\t\~{table_before}\t~{table_after}\t~{plots}]" >> tsv_to_upsert.tsv
+    >>>
+    runtime {
+        docker: container_python
+        cpu: select_first([runtime_set_cpu, 1])
+        gpu: false
+        memory: select_first([runtime_set_memory, 2]) + " GB"
+        disks: "local-disk " + select_first([runtime_set_disk, 10]) + if use_ssd then " SSD" else " HDD"
+        maxRetries: select_first([runtime_set_max_retries, 0])
+        preemptible: select_first([runtime_set_preemptible_tries, 5])
+        returnCodes: 0
+     }
+    output {
+        File tsv_to_upsert = "tsv_to_upsert.tsv"
+    }
+}
+
+##########################################################################
+## *** TASK: upsertToTerra ***
+##########################################################################
+## 'Upserts' entities to Terra.
+##########################################################################
+
+task upsertToTerra {
+    input {
+        File tsv_file
+        String workspace_name
+        String terra_project
+    }
+    command {
+    set -e
+    python3 /scripts/upsert_entities.py \
+        -t "~{tsv_file}" \
+        -p "~{terra_project}" \
+        -w "~{workspace_name}"
+    }
+    output {
+        File upsert_json = "upsert_json.json"
+        String upsert_entities_response = stdout()
+    }
+    runtime {
+        docker: container_python
+        cpu: select_first([runtime_set_cpu, 1])
+        gpu: false
+        memory: select_first([runtime_set_memory, 2]) + " GB"
         disks: "local-disk " + select_first([runtime_set_disk, 10]) + if use_ssd then " SSD" else " HDD"
         maxRetries: select_first([runtime_set_max_retries, 0])
         preemptible: select_first([runtime_set_preemptible_tries, 5])
