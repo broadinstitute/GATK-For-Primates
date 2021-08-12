@@ -467,10 +467,10 @@ task collectTerraOutputs {
 
     command <<<
         # create header line in final output load file
-        echo -e "entity:recalibrated_bam\trecalibrated_bam_index\ttable_before\ttable_after\t\plots" > tsv_to_upsert.tsv
+        echo -e "entity:recalibrated_bam\trecalibrated_bam_index\ttable_before\ttable_after\tplots" > tsv_to_upsert.tsv
 
         # create the row for the flowcell and append to final output load file
-        echo -e "['"'~{sep='","' recalibrated_bam}'"']\t[~{sep="," recalibrated_bam_index}]\t\~{table_before}\t~{table_after}\t~{plots}]" >> tsv_to_upsert.tsv
+        echo -e "['"'~{sep='","' recalibrated_bam}'"']\t'"'~{sep='","' recalibrated_bam_index}'"']\t'"'~{sep='","' table_before}'"']\t'"'~{sep='","' table_after}'"']\t'"'~{sep='","' plots}'"']\t" >> tsv_to_upsert.tsv
     >>>
     runtime {
         docker: container
