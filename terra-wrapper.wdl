@@ -180,7 +180,7 @@ workflow GATKForPrimatesOnTerra {
             path_to_gitc_gatk = path_to_gitc_gatk,
     }
     
-    if (mode != "final")
+    if (mode != "final") {
         call collectTerraOutputs {
             input:
                 recalibrated_bam = gatkForPrimates.recalibrated_bam,
