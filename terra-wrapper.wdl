@@ -216,10 +216,10 @@ workflow GATKForPrimatesOnTerra {
         Array[File]? table_after = gatkForPrimates.table_after
         Array[File]? plots = gatkForPrimates.plots
         ## Outputs from final mode
-        File? finalGenotypes = mergeFinalGenotypes.output_merged_vcf
-        File? finalGenotypesIndex = mergeFinalGenotypes.output_merged_vcf_index
-        File? finalCallset = gatherFinalCallset.output_vcf
-        File? finalCallsetIndex = gatherFinalCallset.output_vcf_index
+        ##File? finalGenotypes = mergeFinalGenotypes.output_merged_vcf
+        ##File? finalGenotypesIndex = mergeFinalGenotypes.output_merged_vcf_index
+        ##File? finalCallset = gatherFinalCallset.output_vcf
+        ##File? finalCallsetIndex = gatherFinalCallset.output_vcf_index
 
     }
     
