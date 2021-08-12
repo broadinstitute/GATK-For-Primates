@@ -180,28 +180,29 @@ workflow GATKForPrimatesOnTerra {
             path_to_gitc_gatk = path_to_gitc_gatk,
     }
     
-    call collectTerraOutputs {
-        input:
-            recalibrated_bam = gatkForPrimates.recalibrated_bam,
-            recalibrated_bam_index = gatkForPrimates.recalibrated_bam_index,
-            table_before = gatkForPrimates.table_before,
-            table_after = gatkForPrimates.table_after,
-            plots = gatkForPrimates.plots,
-            container = container_python,
+    if (mode != "final")
+        call collectTerraOutputs {
+            input:
+                recalibrated_bam = gatkForPrimates.recalibrated_bam,
+                recalibrated_bam_index = gatkForPrimates.recalibrated_bam_index,
+                table_before = gatkForPrimates.table_before,
+                table_after = gatkForPrimates.table_after,
+                plots = gatkForPrimates.plots,
+                container = container_python,
+        }
+        call upsertToTerra {
+            input:
+                tsv_file = collectTerraOutputs.tsv_to_upsert,
+                workspace_name = workspace_name,
+                terra_project = terra_project,
+                container = container_python,
+        }
     }
-
-    call upsertToTerra {
-        input:
-            tsv_file = collectTerraOutputs.tsv_to_upsert,
-            workspace_name = workspace_name,
-            terra_project = terra_project,
-            container = container_python,
-    }
-
+    
     output {
         ## Outputs from Terra wrapper:
         File? terraJSON = generateSampleJSONforTerra.file
-        File tsv_to_upsert = collectTerraOutputs.tsv_to_upsert
+        File? tsv_to_upsert = collectTerraOutputs.tsv_to_upsert
         File? upsert_json = upsertToTerra.upsert_json
 
         ## Outputs from initial mode:
@@ -449,11 +450,11 @@ task generateSampleJSONforTerra {
 
 task collectTerraOutputs {
     input {
-        Array[String] recalibrated_bam
-        Array[String] recalibrated_bam_index
-        Array[String] table_before
-        Array[String] table_after
-        Array[String] plots
+        Array[String]? recalibrated_bam
+        Array[String]? recalibrated_bam_index
+        Array[String]? table_before
+        Array[String]? table_after
+        Array[String]? plots
         # Runtime
         String container
         Int? runtime_set_preemptible_tries
