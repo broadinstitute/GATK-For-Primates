@@ -454,7 +454,14 @@ task collectTerraOutputs {
         Array[String] table_before
         Array[String] table_after
         Array[String] plots
+        # Runtime
         String container
+        Int? runtime_set_preemptible_tries
+        Int? runtime_set_cpu
+        Int? runtime_set_memory
+        Int? runtime_set_disk
+        Int? runtime_set_max_retries
+        Boolean use_ssd = false
     }
 
     command <<<
@@ -490,7 +497,14 @@ task upsertToTerra {
         File tsv_file
         String workspace_name
         String terra_project
+        # Runtime
         String container
+        Int? runtime_set_preemptible_tries
+        Int? runtime_set_cpu
+        Int? runtime_set_memory
+        Int? runtime_set_disk
+        Int? runtime_set_max_retries
+        Boolean use_ssd = false
     }
     command {
     set -e
