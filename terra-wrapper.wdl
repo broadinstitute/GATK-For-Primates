@@ -187,13 +187,15 @@ workflow GATKForPrimatesOnTerra {
             table_before = gatkForPrimates.table_before,
             table_after = gatkForPrimates.table_after,
             plots = gatkForPrimates.plots,
+            container = container_python,
     }
 
     call upsertToTerra {
         input:
             tsv_file = collectTerraOutputs.tsv_to_upsert,
             workspace_name = workspace_name,
-            terra_project = terra_project
+            terra_project = terra_project,
+            container = container_python,
     }
 
     output {
@@ -452,6 +454,7 @@ task collectTerraOutputs {
         Array[String] table_before
         Array[String] table_after
         Array[String] plots
+        String container
     }
 
     command <<<
@@ -462,7 +465,7 @@ task collectTerraOutputs {
         echo -e "['"'~{sep='","' recalibrated_bam}'"']\t[~{sep="," recalibrated_bam_index}]\t\~{table_before}\t~{table_after}\t~{plots}]" >> tsv_to_upsert.tsv
     >>>
     runtime {
-        docker: container_python
+        docker: container
         cpu: select_first([runtime_set_cpu, 1])
         gpu: false
         memory: select_first([runtime_set_memory, 2]) + " GB"
@@ -487,6 +490,7 @@ task upsertToTerra {
         File tsv_file
         String workspace_name
         String terra_project
+        String container
     }
     command {
     set -e
@@ -500,7 +504,7 @@ task upsertToTerra {
         String upsert_entities_response = stdout()
     }
     runtime {
-        docker: container_python
+        docker: container
         cpu: select_first([runtime_set_cpu, 1])
         gpu: false
         memory: select_first([runtime_set_memory, 2]) + " GB"
