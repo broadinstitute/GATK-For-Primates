@@ -174,10 +174,11 @@ workflow GATKForPrimatesOnTerra {
             container_python = container_python,
             path_to_gitc = path_to_gitc,
             path_to_gitc_gatk = path_to_gitc_gatk,
+            running_on_terra = true,
     }
     
     output {
-        ## Outputs from Terra runner:
+        ## Outputs from Terra wrapper:
         File? terraJSON = generateSampleJSONforTerra.file
         ## Outputs from initial mode:
         File? polymorphic_sites_JSON = gatkForPrimates.polymorphic_sites_JSON
