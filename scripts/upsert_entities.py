@@ -2,6 +2,7 @@
 
 import argparse
 import requests
+import pandas as pd
 
 from oauth2client.client import GoogleCredentials
 
@@ -81,9 +82,11 @@ def create_single_entity_request(var_entity_id, var_entity_type, single_entity_o
     return '{"name":"' + var_entity_id + '", "entityType":"' + var_entity_type + '", "operations":[' + single_entity_operations + ']}'
 
 
-def create_upsert_request(tsv, array_attr_cols=None):
+def create_upsert_request(tsv_file, array_attr_cols=None):
     """Generate the request body for batchUpsert API."""
 
+    tsv = pd.read_csv(tsv_file, sep='\t')
+    
     # check tsv format: data model load tsv requirement "entity:table_name_id" or "membership:table_name_id" -> else exit
     entity_type_col_name = tsv.columns[0]                               # entity:entity_name_id
     entity_type = entity_type_col_name.rsplit("_", 1)[0].split(":")[1]  # entity_name
