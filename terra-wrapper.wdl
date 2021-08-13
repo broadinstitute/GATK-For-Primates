@@ -188,6 +188,7 @@ workflow GATKForPrimatesOnTerra {
                 table_before = gatkForPrimates.table_before,
                 table_after = gatkForPrimates.table_after,
                 plots = gatkForPrimates.plots,
+                recalibrated_sampleName = gatkForPrimates.recalibrated_sampleName,
                 container = container_python,
         }
         call upsertToTerra {
@@ -455,6 +456,7 @@ task collectTerraOutputs {
         Array[String]? table_before
         Array[String]? table_after
         Array[String]? plots
+        Array[String]? recalibrated_sampleName
         # Runtime
         String container
         Int? runtime_set_preemptible_tries
@@ -467,10 +469,10 @@ task collectTerraOutputs {
 
     command <<<
         # create header line in final output load file
-        echo -e "entity:recalibrated_bam\trecalibrated_bam_index\ttable_before\ttable_after\tplots" > tsv_to_upsert.tsv
+        echo -e "entity:sample_id\trecalibrated_bam\trecalibrated_bam_index\ttable_before\ttable_after\tplots" > tsv_to_upsert.tsv
 
         # create the row for the flowcell and append to final output load file
-        echo -e "['"'~{sep='","' recalibrated_bam}'"']\t'"'~{sep='","' recalibrated_bam_index}'"']\t'"'~{sep='","' table_before}'"']\t'"'~{sep='","' table_after}'"']\t'"'~{sep='","' plots}'"']\t" >> tsv_to_upsert.tsv
+        echo -e "['"'~{sep='","' recalibrated_sampleName}'"']['"'~{sep='","' recalibrated_bam}'"']\t'"'~{sep='","' recalibrated_bam_index}'"']\t'"'~{sep='","' table_before}'"']\t'"'~{sep='","' table_after}'"']\t'"'~{sep='","' plots}'"']\t" >> tsv_to_upsert.tsv
     >>>
     runtime {
         docker: container
