@@ -195,7 +195,7 @@ workflow GATKForPrimatesOnTerra {
                 tsv_file = collectTerraOutputs.tsv_to_upsert,
                 workspace_name = workspace_name,
                 terra_project = terra_project,
-                container = container_python,
+                container = "broadinstitute/python-requests",
         }
     }
     
