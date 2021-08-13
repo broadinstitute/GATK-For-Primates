@@ -728,6 +728,7 @@ workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
         Array[File]? table_before = BQSR.table_before
         Array[File]? table_after = BQSR.table_after
         Array[File]? plots = BQSR.plots
+        Array[String]? recalibrated_sampleName = BQSR.recalibrated_sampleName
         ## Outputs from final mode
         #File? finalGenotypes = mergeFinalGenotypes.output_merged_vcf
         #File? finalGenotypesIndex = mergeFinalGenotypes.output_merged_vcf_index
