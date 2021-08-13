@@ -509,7 +509,8 @@ task upsertToTerra {
     }
     command {
     set -e
-    python3 scripts/upsert_entities.py \
+    wget https://raw.githubusercontent.com/broadinstitute/GATK-For-Primates/main/scripts/upsert_entities.py
+    python3 upsert_entities.py \
         -t "~{tsv_file}" \
         -p "~{terra_project}" \
         -w "~{workspace_name}"
