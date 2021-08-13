@@ -509,7 +509,7 @@ task upsertToTerra {
     }
     command {
     set -e
-    python3 /scripts/upsert_entities.py \
+    python3 scripts/upsert_entities.py \
         -t "~{tsv_file}" \
         -p "~{terra_project}" \
         -w "~{workspace_name}"
