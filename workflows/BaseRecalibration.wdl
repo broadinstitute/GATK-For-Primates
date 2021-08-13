@@ -74,6 +74,7 @@ workflow BQSR {
         File recalibrated_bam = baseRecalibrator.recalibrated_bam
         File recalibrated_bam_index = baseRecalibrator.recalibrated_bam_index
         File plots = analyzeCovariates.plots
+        String recalibrated_sampleName = sampleName
     }
 
 }
