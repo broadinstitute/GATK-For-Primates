@@ -466,18 +466,26 @@ task collectTerraOutputs {
         Int? runtime_set_max_retries
         Boolean use_ssd = false
     }
-
     command <<<
-        # Create header line in TSV to upsert
-        echo -e "entity:sample_id\trecalibrated_bam\trecalibrated_bam_index\ttable_before\ttable_after\tplots" > tsv_to_upsert.tsv
+    set -oe pipefail
+    
+    python << CODE
+    recalibrated_bam = ['~{sep="','" recalibrated_bam}']
+    recalibrated_bam_index = ['~{sep="','" recalibrated_bam_index}']
+    table_before = ['~{sep="','" table_before}']
+    table_after = ['~{sep="','" table_after}']
+    plots = ['~{sep="','" plots}']
+    recalibrated_sampleName = ['~{sep="','" recalibrated_sampleName}']
 
-        # Add sample row to TSV
-        echo -e "[~{sep="," recalibrated_sampleName}]\t\
-        [~{sep="," recalibrated_bam}]\t\
-        [~{sep="," recalibrated_bam_index}]\t\
-        [~{sep="," table_before}]\t\
-        [~{sep="," table_after}]\t\
-        [~{sep="," plots}]" >> tsv_to_upsert.tsv
+    if len(recalibrated_bam)!= len(recalibrated_bam_index) != len(table_before) != len(table_after) != len(plots) != len(recalibrated_sampleName):
+        print("Numbers of input variables are not equal.")
+        exit(1)
+
+    with open("tsv_to_upsert.txt", "w") as fi:
+        fi.write("entity:sample_id\trecalibrated_bam\trecalibrated_bam_index\ttable_before\ttable_after\tplots")
+        for i in range(len(recalibrated_bam)):
+            fi.write(recalibrated_sampleName[i] + "\t" + recalibrated_bam[i] + "\t" + recalibrated_bam_index[i] + "\t" + table_before[i] + "\t" + table_after[i] + "\t" + plots[i] + "\n")
+    CODE
     >>>
     runtime {
         docker: container
