@@ -160,7 +160,6 @@ workflow GATKForPrimatesOnTerra {
     output {
         ## Outputs from Terra wrapper:
         File? terraJSON = generateSampleJSONforTerra.file
-        File? tsv_to_upsert = collectTerraOutputs.tsv_to_upsert
         File? upsert_json = upsertToTerra.upsert_json
     }
     
