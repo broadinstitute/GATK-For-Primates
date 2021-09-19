@@ -382,65 +382,6 @@ task generateSampleJSONforTerra {
 }
 
 ##########################################################################
-## *** TASK: collectTerraOutputs ***
-##########################################################################
-## Creates a TSV of sample outputs.
-##########################################################################
-
-task collectTerraOutputs {
-    input {
-        Array[String]? recalibrated_bam
-        Array[String]? recalibrated_bam_index
-        Array[String]? table_before
-        Array[String]? table_after
-        Array[String]? plots
-        Array[String]? recalibrated_sampleName
-        # Runtime
-        String container
-        Int? runtime_set_preemptible_tries
-        Int? runtime_set_cpu
-        Int? runtime_set_memory
-        Int? runtime_set_disk
-        Int? runtime_set_max_retries
-        Boolean use_ssd = false
-    }
-    command <<<
-    set -oe pipefail
-    
-    python << CODE
-    recalibrated_bam = ['~{sep="','" recalibrated_bam}']
-    recalibrated_bam_index = ['~{sep="','" recalibrated_bam_index}']
-    table_before = ['~{sep="','" table_before}']
-    table_after = ['~{sep="','" table_after}']
-    plots = ['~{sep="','" plots}']
-    recalibrated_sampleName = ['~{sep="','" recalibrated_sampleName}']
-
-    if len(recalibrated_bam)!= len(recalibrated_bam_index) != len(table_before) != len(table_after) != len(plots) != len(recalibrated_sampleName):
-        print("Numbers of input variables are not equal.")
-        exit(1)
-
-    with open("tsv_to_upsert.tsv", "w") as fi:
-        fi.write("entity:sample_id\trecalibrated_bam\trecalibrated_bam_index\ttable_before\ttable_after\tplots\n")
-        for i in range(len(recalibrated_bam)):
-            fi.write(recalibrated_sampleName[i] + "\t" + recalibrated_bam[i] + "\t" + recalibrated_bam_index[i] + "\t" + table_before[i] + "\t" + table_after[i] + "\t" + plots[i] + "\n")
-    CODE
-    >>>
-    runtime {
-        docker: container
-        cpu: select_first([runtime_set_cpu, 1])
-        gpu: false
-        memory: select_first([runtime_set_memory, 2]) + " GB"
-        disks: "local-disk " + select_first([runtime_set_disk, 10]) + if use_ssd then " SSD" else " HDD"
-        maxRetries: select_first([runtime_set_max_retries, 0])
-        preemptible: select_first([runtime_set_preemptible_tries, 5])
-        returnCodes: 0
-     }
-    output {
-        File tsv_to_upsert = "tsv_to_upsert.tsv"
-    }
-}
-
-##########################################################################
 ## *** TASK: upsertToTerra ***
 ##########################################################################
 ## 'Upserts' entities to Terra.
