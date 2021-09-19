@@ -118,7 +118,8 @@ workflow GATKForPrimatesOnTerra {
         Array[String]? RG_KS
         Array[String]? RG_PG
         Array[String]? RG_PI
-        Array[String]? RG_PM        
+        Array[String]? RG_PM
+        File tsv_to_upsert
 
     }
 
@@ -148,57 +149,14 @@ workflow GATKForPrimatesOnTerra {
 
     Array[sampleInfo]+ sampleList = read_json(generateSampleJSONforTerra.file)
 
-    call gatkForPrimates.GATKForPrimatesGermlineSNPsIndels_GATK4 as gatkForPrimates {
+    call upsertToTerra {
         input:
-            mode = mode,
-            validate_truth_sets = validate_truth_sets,
-            flowcell_patterned = flowcell_patterned,
-            merge_contigs_into_num_partitions = merge_contigs_into_num_partitions,
-            bwamem2 = bwamem2,
-            cram_not_bam = cram_not_bam,
-            ref = ref,
-            ref_dict = ref_dict,
-            ref_fai = ref_fai,
-            ref_amb = ref_amb,
-            ref_ann = ref_ann,
-            ref_pac = ref_pac,
-            ref_bwt = ref_bwt,
-            ref_sa = ref_sa,
-            ref_0123 = ref_0123,
-            ref_bwt_2bit_64 = ref_bwt_2bit_64,
-            packaged_polymorphic_regions = packaged_polymorphic_regions,
-            truth_set_SNPs = truth_set_SNPs,
-            truth_set_SNPs_index = truth_set_SNPs_index,
-            truth_set_INDELs = truth_set_INDELs,
-            truth_set_INDELs_index = truth_set_INDELs_index,
-            scatterList = scatterList,
-            sampleList = sampleList,
-            container_gatk = container_gatk,
-            container_gitc = container_gitc,
-            container_python = container_python,
-            path_to_gitc = path_to_gitc,
-            path_to_gitc_gatk = path_to_gitc_gatk,
+            tsv_file = tsv_to_upsert,
+            workspace_name = workspace_name,
+            terra_project = terra_project,
+            container = "schaluvadi/pathogen-genomic-surveillance:batch_upsert",
     }
     
-    if (mode != "final") {
-        call collectTerraOutputs {
-            input:
-                recalibrated_bam = gatkForPrimates.recalibrated_bam,
-                recalibrated_bam_index = gatkForPrimates.recalibrated_bam_index,
-                table_before = gatkForPrimates.table_before,
-                table_after = gatkForPrimates.table_after,
-                plots = gatkForPrimates.plots,
-                recalibrated_sampleName = gatkForPrimates.recalibrated_sampleName,
-                container = container_python,
-        }
-        call upsertToTerra {
-            input:
-                tsv_file = collectTerraOutputs.tsv_to_upsert,
-                workspace_name = workspace_name,
-                terra_project = terra_project,
-                container = "schaluvadi/pathogen-genomic-surveillance:batch_upsert",
-        }
-    }
     
     output {
         ## Outputs from Terra wrapper:
