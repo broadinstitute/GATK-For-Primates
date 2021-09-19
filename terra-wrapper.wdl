@@ -481,7 +481,7 @@ task collectTerraOutputs {
         print("Numbers of input variables are not equal.")
         exit(1)
 
-    with open("tsv_to_upsert.txt", "w") as fi:
+    with open("tsv_to_upsert.tsv", "w") as fi:
         fi.write("entity:sample_id\trecalibrated_bam\trecalibrated_bam_index\ttable_before\ttable_after\tplots")
         for i in range(len(recalibrated_bam)):
             fi.write(recalibrated_sampleName[i] + "\t" + recalibrated_bam[i] + "\t" + recalibrated_bam_index[i] + "\t" + table_before[i] + "\t" + table_after[i] + "\t" + plots[i] + "\n")
