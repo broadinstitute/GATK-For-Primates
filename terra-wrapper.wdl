@@ -163,24 +163,6 @@ workflow GATKForPrimatesOnTerra {
         File? terraJSON = generateSampleJSONforTerra.file
         File? tsv_to_upsert = collectTerraOutputs.tsv_to_upsert
         File? upsert_json = upsertToTerra.upsert_json
-
-        ## Outputs from initial mode:
-        File? polymorphic_sites_JSON = gatkForPrimates.polymorphic_sites_JSON
-        File? polymorphic_sites_tar = gatkForPrimates.polymorphic_sites_tar
-        ## Outputs from initial/repeat modes:
-        File? high_confidence_sites_BQSR_vcf = gatkForPrimates.high_confidence_sites_BQSR_vcf
-        File? high_confidence_sites_BQSR_vcf_index = gatkForPrimates.high_confidence_sites_BQSR_vcf_index
-        Array[File]? recalibrated_bam = gatkForPrimates.recalibrated_bam
-        Array[File]? recalibrated_bam_index = gatkForPrimates.recalibrated_bam_index
-        Array[File]? table_before = gatkForPrimates.table_before
-        Array[File]? table_after = gatkForPrimates.table_after
-        Array[File]? plots = gatkForPrimates.plots
-        ## Outputs from final mode
-        ##File? finalGenotypes = mergeFinalGenotypes.output_merged_vcf
-        ##File? finalGenotypesIndex = mergeFinalGenotypes.output_merged_vcf_index
-        ##File? finalCallset = gatherFinalCallset.output_vcf
-        ##File? finalCallsetIndex = gatherFinalCallset.output_vcf_index
-
     }
     
 }
