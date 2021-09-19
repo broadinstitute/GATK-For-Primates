@@ -34,7 +34,6 @@ version 1.0
 ## authorized to run all programs before running this script. Please see the docker
 ## containers for detailed licensing information pertaining to the included programs.
 
-import "gatk-for-primates-germline-snps-indels.wdl" as gatkForPrimates
 import "structs/structs.wdl"
 
 ##########################################################################
