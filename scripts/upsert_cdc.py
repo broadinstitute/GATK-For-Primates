@@ -59,21 +59,9 @@ def create_upsert_request(tsv):
         return
 
     # define which columns are array values and which are not
-    array_attr_cols = ["assembled_ids", "assemblies_fasta", "cleaned_reads_unaligned_bams",
-                       "cleaned_bams_tiny", "demux_commonBarcodes", "demux_metrics", "demux_outlierBarcodes",
-                       "failed_annotation_ids", "failed_assembly_ids", "passing_assemblies_fasta",
-                       "primer_trimmed_read_count", "primer_trimmed_read_percent", "raw_reads_unaligned_bams",
-                       "read_counts_depleted", "read_counts_raw", "submittable_assemblies_fasta", "submittable_ids",
-                       "vadr_outputs", "data_tables_out"]
+    array_attr_cols = []
 
-    single_attr_cols = ["assembly_stats_tsv", "cleaned_bam_uris", "genbank_fasta", "genbank_source_table",
-                        "gisaid_fasta", "gisaid_meta_tsv", "ivar_trim_stats_html", "ivar_trim_stats_png",
-                        "ivar_trim_stats_tsv", "max_ntc_bases", "meta_by_filename_json",
-                        "multiqc_report_cleaned", "multiqc_report_raw", "nextclade_all_json", "nextclade_auspice_json",
-                        "nextmeta_tsv", "num_assembled", "num_failed_annotation", "num_failed_assembly",
-                        "num_read_files", "num_samples", "num_submittable", "picard_metrics_wgs",
-                        "run_date", "sequencing_reports", "spikein_counts", "sra_metadata", "submission_xml",
-                        "submission_zip", "submit_ready"]
+    single_attr_cols = ["sample_id", "recalibrated_bam", "recalibrated_bam_index", "table_before", "table_after", "plots"]
 
     # templates for request body components
     template_req_body = '''[{"name":"VAR_ENTITY_ID",
