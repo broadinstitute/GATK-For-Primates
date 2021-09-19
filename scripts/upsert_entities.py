@@ -61,7 +61,7 @@ def create_upsert_request(tsv):
         return
 
     # define which columns are array values and which are not
-    array_attr_cols = ["sample_id", "recalibrated_bam", "recalibrated_bam_index",
+    single_attr_cols = ["sample_id", "recalibrated_bam", "recalibrated_bam_index",
                        "table_before", "table_after", "plots"]
 
     # templates for request body components
@@ -76,13 +76,13 @@ def create_upsert_request(tsv):
     # initiate string to capture all operation requests
     all_operation_requests = ''''''
 
-    # For each column that is an array
-    for col in array_attr_cols:
-        all_operation_requests += template_make_list_attr.replace("VAR_ATTRIBUTE_LIST_NAME", col)
-        # convert "array" from tsv which translates to a string back into an array
-        attr_values = str(df_tsv.iloc[0][col]).replace('"', '').strip('[]').split(",")
-        for val in attr_values:
-            all_operation_requests += template_add_list_member.replace("VAR_LIST_MEMBER", val).replace("VAR_ATTRIBUTE_LIST_NAME", col)
+    # for each column (none are arrays)
+    for col in single_attr_cols:
+        # get valuue in col from df
+        attr_val = str(df_tsv.iloc[0][col])
+
+        # add the request for attribute to list
+        all_operation_requests += template_make_single_attr.replace("VAR_ATTRIBUTE_MEMBER", attr_val).replace("VAR_ATTRIBUTE_NAME", col)
 
     # remove trailing comma from the last request template
     all_operation_requests = all_operation_requests[:-1]
