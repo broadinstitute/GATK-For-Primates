@@ -11,7 +11,7 @@ version 1.0
 ## documentation at: https://github.com/broadinstitute/GATK-For-Primates
 ##
 ## Software version requirements :
-## - Cromwell 65
+## - Cromwell 67
 ## - bwa 0.7.15 (note: from GITC)
 ## - Samtools 1.11 (note: from GITC)
 ## - GATK 4.2.1.0 (note: GATK 4.1.8.0 is used in GITC)
