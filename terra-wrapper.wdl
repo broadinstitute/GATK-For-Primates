@@ -531,7 +531,6 @@ task upsertToTerra {
         -w "~{workspace_name}"
     }
     output {
-        File upsert_json = "upsert_json.json"
         String upsert_entities_response = stdout()
     }
     runtime {
