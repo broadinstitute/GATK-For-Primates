@@ -235,11 +235,11 @@ workflow GATKForPrimatesOnTerra {
 task generateSampleJSONforTerra {
     input {
         Array[String] name
+        Array[String] taxon_group
         Array[String]? RG_ID
         Array[String]? RG_LB
         Array[String]? RG_SM
         Array[String]? RG_PU
-        Array[String] taxon_group
         Array[String]? R1
         Array[String]? R2
         Array[String]? unmapped_bam
@@ -269,11 +269,11 @@ task generateSampleJSONforTerra {
     import json
 
     name = ['~{sep="','" name}']
+    taxon_group = ['~{sep="','" taxon_group}']
     RG_ID = ['~{sep="','" RG_ID}']
     RG_LB = ['~{sep="','" RG_LB}']
     RG_SM = ['~{sep="','" RG_SM}']
     RG_PU = ['~{sep="','" RG_PU}']
-    taxon_group = ['~{sep="','" taxon_group}']
     R1 = ['~{sep="','" R1}']
     R2 = ['~{sep="','" R2}']
     unmapped_bam = ['~{sep="','" unmapped_bam}']
@@ -294,9 +294,24 @@ task generateSampleJSONforTerra {
     for i in range(len(name)):
 
         try:
-            out_R1 = R1[i]
+            out_RG_ID = RG_ID[i]
         except IndexError:
-            out_R1 = "NULL"
+            out_RG_ID = "NULL"
+
+        try:
+            out_RG_LB = RG_LB[i]
+        except IndexError:
+            out_RG_LB = "NULL"
+
+        try:
+            out_RG_SM = RG_SM[i]
+        except IndexError:
+            out_RG_SM = "NULL"
+
+        try:
+            out_RG_PU = RG_PU[i]
+        except IndexError:
+            out_RG_PU = "NULL"
 
         try:
             out_R1 = R1[i]
@@ -365,11 +380,11 @@ task generateSampleJSONforTerra {
 
         data.append({
             'name': name[i],
-            'RG_ID': RG_ID[i],
-            'RG_LB': RG_LB[i],
-            'RG_SM': RG_SM[i],
-            'RG_PU': RG_PU[i],
             'taxon_group': taxon_group[i],
+            'RG_ID': out_RG_ID[i],
+            'RG_LB': out_RG_LB[i],
+            'RG_SM': out_RG_SM[i],
+            'RG_PU': out_RG_PU[i],
             'R1': out_R1,
             'R2': out_R2,
             'unmapped_bam': out_unmapped_bam,
@@ -394,6 +409,15 @@ task generateSampleJSONforTerra {
         print(n)
 
     for i in range(len(obj)):
+
+        if obj[i]["RG_ID"] == "NULL" or obj[i]["RG_ID"] == "":
+            obj[i].pop("RG_ID")
+        if obj[i]["RG_LB"] == "NULL" or obj[i]["RG_LB"] == "":
+            obj[i].pop("RG_LB")
+        if obj[i]["RG_SM"] == "NULL" or obj[i]["RG_SM"] == "":
+            obj[i].pop("RG_SM")
+        if obj[i]["RG_PU"] == "NULL" or obj[i]["RG_PU"] == "":
+            obj[i].pop("RG_PU")
         if obj[i]["R1"] == "NULL" or obj[i]["R1"] == "":
             obj[i].pop("R1")
         if obj[i]["R2"] == "NULL" or obj[i]["R2"] == "":
