@@ -202,9 +202,8 @@ workflow GATKForPrimatesOnTerra {
     
     output {
         ## Outputs from Terra wrapper:
-        File? terraJSON = generateSampleJSONforTerra.file
-        File? tsv_to_upsert = collectTerraOutputs.tsv_to_upsert
-        File? upsert_json = upsertToTerra.upsert_json
+        ##File? terraJSON = generateSampleJSONforTerra.file
+        ##File? tsv_to_upsert = collectTerraOutputs.tsv_to_upsert
 
         ## Outputs from initial mode:
         File? polymorphic_sites_JSON = gatkForPrimates.polymorphic_sites_JSON
