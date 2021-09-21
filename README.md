@@ -7,6 +7,7 @@ A reproducible pipeline for germline SNP and Indel variant calling in non-human 
 This pipeline is in the **alpha** stage of development. Please do not use this pipeline until we have completed initial benchmarking. Once we see promising results with sensitivity and precision, we'll seek the community's feedback to make additional improvements.
 
 **Run on Cromwell:** `cromwell run gatk-for-primates-germline-snps-indels.wdl -i inputs.json`
+
 **Run on Terra:** See the `GATK_For_Primates` workspace on [Terra](https://terra.bio/).
 
 ## Summary:
