@@ -12,10 +12,10 @@ version 1.0
 ##
 ## Software version requirements :
 ## - Cromwell 67
-## - bwa 0.7.15 (note: from GITC)
-## - Samtools 1.11 (note: from GITC)
-## - GATK 4.2.1.0 (note: GATK 4.1.8.0 is used in GITC)
-## - Python 3.9.5
+## - bwa 0.7.17 (note: GITC uses 0.7.15, GATK container has none)
+## - Samtools 1.13 (note: GITC uses 1.11, GATK container uses 1.7)
+## - GATK 4.2.2.0 (note: GATK 4.1.8.0 is used in GITC)
+## - Python 3.9.7
 ##
 ## Program versions can be changed by defining alternative containers.
 ## Runtime parameters are optimized for Terra (https://www.terra.bio/)
@@ -90,9 +90,9 @@ workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
         Array[scatterInfo]+ scatterList
         
         ## Define containers
-        String container_gatk = "broadinstitute/gatk:4.2.1.0"
+        String container_gatk = "broadinstitute/gatk:4.2.2.0"
         String container_gitc = "us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.5.7-2021-06-09_16-47-48Z"
-        String container_python = "python:3.9.5"
+        String container_python = "python:3.9.7"
 
         ## Define paths
         String path_to_gitc = "/usr/gitc/"
