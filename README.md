@@ -39,11 +39,11 @@ In `final` mode, the outputs from `initial` or `repeat` mode are used as inputs,
 ## Requirements
 
 ### Software version requirements :
-- GATK 4.2.1.0
-- Samtools 1.11
-- bwa 0.7.15
-- Python 3.9.5
-- Cromwell 66 (using WDL 1.0)
+- GATK 4.2.2.0
+- Samtools 1.13
+- bwa 0.7.17
+- Python 3.9.7
+- Cromwell 67 (using WDL 1.0)
 - Docker support
 
 ### Input requirements/expectations:
