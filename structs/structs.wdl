@@ -15,18 +15,17 @@ version 1.0
 ## authorized to run all programs before running this script. Please see the docker
 ## containers for detailed licensing information pertaining to the included programs.
 
-struct sampleInfo {
-    String name
-    String? RG_ID
-    String? RG_LB
-    String? RG_SM
-    String? RG_PU
+struct readInfo {
+    String read_id
+    String sample_id
     String taxon_group
-    File? R1
-    File? R2
-    File? unmapped_bam
-    File? bam
-    File? bam_index
+    String? R1
+    String? R2
+    String? unmapped_bam
+    String RG_ID
+    String RG_LB
+    String RG_SM
+    String RG_PU
     String? RG_CN
     String? RG_DS
     String? RG_DT
@@ -35,6 +34,15 @@ struct sampleInfo {
     String? RG_PG
     String? RG_PI
     String? RG_PM
+
+struct sampleInfo {
+    String sample_id
+    String taxon_group
+    File? bam
+    File? bam_index
+    File? recalibrated_bam
+    File? recalibrated_bam_index
+    
 }
 
 struct scatterInfo {
