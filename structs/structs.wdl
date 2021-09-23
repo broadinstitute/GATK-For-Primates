@@ -34,6 +34,7 @@ struct readInfo {
     String? RG_PG
     String? RG_PI
     String? RG_PM
+}
 
 struct sampleInfo {
     String sample_id
