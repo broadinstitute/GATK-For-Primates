@@ -86,8 +86,8 @@ workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
         File? truth_set_INDELs_index # index for the above
         
         ## Define arrays from input JSON; definitions are in the structs/structs.wdl file
-        Array[readInfo]+ readList
-        Array[sampleInfo]+ sampleList
+        Array[readInfo]? readList
+        Array[sampleInfo]? sampleList
         Array[scatterInfo]+ scatterList
         
         ## Define containers
