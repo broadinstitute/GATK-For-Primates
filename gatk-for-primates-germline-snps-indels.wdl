@@ -86,6 +86,7 @@ workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
         File? truth_set_INDELs_index # index for the above
         
         ## Define arrays from input JSON; definitions are in the structs/structs.wdl file
+        Array[readInfo]+ readList
         Array[sampleInfo]+ sampleList
         Array[scatterInfo]+ scatterList
         
@@ -129,6 +130,7 @@ workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
             ref_fai = ref_fai,
             scatterList = scatterList,
             sampleList = sampleList,
+            readList = readList,
             truth_set_SNPs = truth_set_SNPs,
             truth_set_SNPs_index = truth_set_SNPs_index,
             truth_set_INDELs = truth_set_INDELs,
@@ -154,7 +156,7 @@ workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
                 ref_dict = ref_dict,
                 ref_fai = ref_fai,
                 ref_idxs = ref_idxs,
-                sampleList = sampleList,
+                readList = readList,
                 flowcell_patterned = flowcell_patterned,
                 bwamem2 = bwamem2,
                 cram_not_bam = cram_not_bam,
