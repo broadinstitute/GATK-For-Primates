@@ -18,10 +18,10 @@ version 1.0
 ## documentation at: https://github.com/broadinstitute/GATK-For-Primates
 ##
 ## Software version requirements :
-## - Cromwell 67
+## - Cromwell 71
 ## - bwa 0.7.17 (note: GITC uses 0.7.15, GATK container has none)
 ## - Samtools 1.13 (note: GITC uses 1.11, GATK container uses 1.7)
-## - GATK 4.2.2.0 (note: GATK 4.1.8.0 is used in GITC)
+## - GATK 4.2.3.0 (note: GATK 4.1.8.0 is used in GITC)
 ## - Python 3.9.7
 ##
 ## Program versions can be changed by defining alternative containers.
@@ -91,7 +91,7 @@ workflow GATKForPrimatesOnTerra {
         Array[scatterInfo]+ scatterList = read_json(scatterList_json)
         
         ## Define containers
-        String container_gatk = "broadinstitute/gatk:4.2.2.0"
+        String container_gatk = "broadinstitute/gatk:4.2.3.0"
         String container_gitc = "us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.5.7-2021-06-09_16-47-48Z"
         String container_python = "python:3.9.7"
 
