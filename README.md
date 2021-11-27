@@ -50,11 +50,11 @@ At the conclusion of `final` mode, all samples are re-genotyped at the passing l
 ## Requirements
 
 ### Software version requirements :
-- GATK 4.2.2.0
+- GATK 4.2.3.0
 - Samtools 1.13
 - bwa 0.7.17
 - Python 3.9.7
-- Cromwell 67 (using WDL 1.0)
+- Cromwell 71 (using WDL 1.0)
 - Docker support
 
 ### Input requirements/expectations:
