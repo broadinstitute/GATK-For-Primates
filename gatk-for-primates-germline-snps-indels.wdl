@@ -58,7 +58,6 @@ workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
  
         ## Collect optional variables from input JSON
         Boolean validate_truth_sets = true # options: true / false; if false this will disable running ValidateVariants on truth sets in 'Final' mode
-        Boolean flowcell_patterned = true # options: true / false; this influences pixel distance when marking duplicates
         Int? merge_contigs_into_num_partitions # options: optional parameter for GenomicsDBImport
         Boolean bwamem2 = false # options: true / false; indicating bwa (as bwa mem) or bwamem2 (as bwamem2 mem) ***-Coming-Soon-***
         Boolean cram_not_bam = true # options: true / false; if false this will disable use of CRAM instead of BAM format
@@ -154,7 +153,6 @@ workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
                 ref_fai = ref_fai,
                 ref_idxs = ref_idxs,
                 sampleList = sampleList,
-                flowcell_patterned = flowcell_patterned,
                 bwamem2 = bwamem2,
                 cram_not_bam = cram_not_bam,
                 ## Runtime
