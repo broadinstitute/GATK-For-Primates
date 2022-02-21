@@ -1,7 +1,6 @@
 version 1.0
 
-## Copyright Broad Institute and Wisconsin National Primate Research Center,
-## University of Wisconsin-Madison, 2021
+## Copyright Broad Institute and Graham L Banes, 2021-2022
 ## 
 ##########################################################################
 ## TAKE NOTE: This WDL acts as a wrapper for the 'GATK for Primates'
@@ -9,7 +8,7 @@ version 1.0
 ## WDL to run the pipeline anywhere else: it will fail! Instead, use:
 ## gatk-for-primates-germline-snps-indels.wdl
 ##########################################################################
-##
+## 
 ## Complete germline short variant discovery pipeline optimized for
 ## non-human primates, following proposed GATK Best Practices for
 ## Non-Human Animal Genomes.
@@ -18,14 +17,14 @@ version 1.0
 ## documentation at: https://github.com/broadinstitute/GATK-For-Primates
 ##
 ## Software version requirements :
-## - Cromwell 71
-## - bwa 0.7.17 (note: GITC uses 0.7.15, GATK container has none)
-## - Samtools 1.13 (note: GITC uses 1.11, GATK container uses 1.7)
-## - GATK 4.2.3.0 (note: GATK 4.1.8.0 is used in GITC)
-## - Python 3.9.7
+## - Cromwell 76
+## - bwa 0.7.17 (note: GITC uses 0.7.15-r1140, GATK container has none)
+## - Samtools 1.15 (note: GITC uses 1.11, GATK 4.2.5.0 container uses 1.7)
+## - GATK 4.2.5.0 (note: GATK 4.1.8.0 is used in GITC)
+## - Python 3.10.2
 ##
 ## Program versions can be changed by defining alternative containers.
-## Runtime parameters are optimized for Terra (https://terra.bio/)
+## Runtime parameters are optimized for Terra (https://www.terra.bio/)
 ##
 ## LICENSING : 
 ## This script is released under the WDL source code license (BSD-3) (see LICENSE in 
@@ -54,7 +53,6 @@ workflow GATKForPrimatesOnTerra {
  
         ## Collect optional variables from Terra
         Boolean validate_truth_sets = true # options: true / false; if false this will disable running ValidateVariants on truth sets in 'Final' mode
-        Boolean flowcell_patterned = true # options: true / false; this influences pixel distance when marking duplicates
         Int? merge_contigs_into_num_partitions # options: optional parameter for GenomicsDBImport
         Boolean bwamem2 = false # options: true / false; indicating bwa (as bwa mem) or bwamem2 (as bwamem2 mem) ***-Coming-Soon-***
         Boolean cram_not_bam = true # options: true / false; if false this will disable use of CRAM instead of BAM format
@@ -118,7 +116,8 @@ workflow GATKForPrimatesOnTerra {
         Array[String]? RG_KS
         Array[String]? RG_PG
         Array[String]? RG_PI
-        Array[String]? RG_PM        
+        Array[String]? RG_PM
+        Array[String]? flowcell_patterned
 
     }
 
@@ -142,7 +141,8 @@ workflow GATKForPrimatesOnTerra {
             RG_KS = RG_KS,
             RG_PG = RG_PG,
             RG_PI = RG_PI,
-            RG_PM = RG_PM, 
+            RG_PM = RG_PM,
+            flowcell_patterned = flowcell_patterned,
             container = container_python,
     }
 
@@ -152,7 +152,6 @@ workflow GATKForPrimatesOnTerra {
         input:
             mode = mode,
             validate_truth_sets = validate_truth_sets,
-            flowcell_patterned = flowcell_patterned,
             merge_contigs_into_num_partitions = merge_contigs_into_num_partitions,
             bwamem2 = bwamem2,
             cram_not_bam = cram_not_bam,
@@ -253,6 +252,7 @@ task generateSampleJSONforTerra {
         Array[String]? RG_PG
         Array[String]? RG_PI
         Array[String]? RG_PM
+        Array[String]? flowcell_patterned
         # Runtime
         String container
         Int? runtime_set_preemptible_tries
@@ -287,6 +287,7 @@ task generateSampleJSONforTerra {
     RG_PG = ['~{sep="','" RG_PG}']
     RG_PI = ['~{sep="','" RG_PI}']
     RG_PM = ['~{sep="','" RG_PM}']
+    flowcell_patterned = ['~{sep="','" flowcell_patterned}']
 
     data = {}
     data = []
@@ -378,6 +379,12 @@ task generateSampleJSONforTerra {
         except IndexError:
             out_RG_PM = "NULL"
 
+        try:
+            out_flowcell_patterned = flowcell_patterned[i]
+        except IndexError:
+            out_flowcell_patterned = "NULL"
+
+
         data.append({
             'name': name[i],
             'taxon_group': taxon_group[i],
@@ -398,6 +405,7 @@ task generateSampleJSONforTerra {
             'RG_PG': out_RG_PG,
             'RG_PI': out_RG_PI,
             'RG_PM': out_RG_PM,
+            'flowcell_patterned': out_flowcell_patterned,
             })
 
     with open('terraInputs_prep.txt', 'w') as tempfile:
@@ -444,6 +452,8 @@ task generateSampleJSONforTerra {
             obj[i].pop("RG_PI")
         if obj[i]["RG_PM"] == "NULL" or obj[i]["RG_PM"] == "":
             obj[i].pop("RG_PM")    
+        if obj[i]["flowcell_patterned"] == "NULL" or obj[i]["flowcell_patterned"] == "":
+            obj[i].pop("flowcell_patterned")    
 
     with open('terraInputs.txt', 'w') as outfile:
         json.dump(obj, outfile, sort_keys=True, indent=4)
