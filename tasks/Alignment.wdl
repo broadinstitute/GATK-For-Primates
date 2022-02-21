@@ -146,7 +146,6 @@ task mapFromUnmappedBAM {
         --UNMAPPED_BAM ~{unmapped_bam} \
         --OUTPUT ~{sampleName}_mapped_and_merged.bam \
         --REFERENCE_SEQUENCE ~{ref} \
-        --PAIRED_RUN true \
         --SORT_ORDER unsorted \
         --IS_BISULFITE_SEQUENCE false \
         --ALIGNED_READS_ONLY false \
