@@ -56,7 +56,7 @@ workflow unmappedInputToAlignedBAM {
     scatter (sample in sampleList) {
 
         # If no uBAM is available, map the FASTQ files
-        if (!defined(sample.unmapped_bam)) {
+        if (!defined(sample.unmapped_bam) || (sample.unmapped_bam == "NULL")) {
 
             call alignment.mapFromPairedFASTQ as mapFromPairedFASTQ{
                 input:
@@ -88,7 +88,7 @@ workflow unmappedInputToAlignedBAM {
         }
 
         # Otherwise, map the uBAM instead
-        if (defined(sample.unmapped_bam)) {
+        if (defined(sample.unmapped_bam) && (sample.unmapped_bam != "NULL")) {
 
             ## Stream unmapped BAM to FASTQ and map to BAM
             call alignment.mapFromUnmappedBAM as mapFromUnmappedBAM {
