@@ -117,9 +117,10 @@ task mapFromUnmappedBAM {
         Boolean use_ssd = false
     }
     ## Runtime parameters
-    Float size_input_files = size(ref, "GB") + size(ref_dict, "GB") + size(ref_fai, "GB") + size(ref_idxs, "GB") + size(unmapped_bam, "GB")
+    Float size_unmapped_bam = size(unmapped_bam, "GB")    
+    Float size_ref_files = size(ref, "GB") + size(ref_dict, "GB") + size(ref_fai, "GB") + size(ref_idxs, "GB")
     Float disk_multiplier = 2.5
-    Int runtime_calculated_disk = ceil(size_input_files + (disk_multiplier * unmapped_bam_size) + 20)
+    Int runtime_calculated_disk = ceil(size_ref_files + size_unmapped_bam + (disk_multiplier * size_unmapped_bam) + 20)
     Int command_mem_gb = select_first([runtime_set_memory, 10]) - 1
     command <<<
 
