@@ -1,7 +1,6 @@
 version 1.0
 
-## Copyright Broad Institute and Wisconsin National Primate Research Center,
-## University of Wisconsin-Madison, 2021
+## Copyright Broad Institute and Graham L Banes, 2021-2022
 ## 
 ## Sub-workflow from the complete germline short variant discovery pipeline
 ## optimized for non-human primates. For requirements, expectations and
@@ -32,7 +31,6 @@ workflow unmappedInputToAlignedBAM {
         File ref_fai
         Array[File?]+ ref_idxs
         Array[sampleInfo]+ sampleList
-        Boolean flowcell_patterned
         Boolean bwamem2
         Boolean cram_not_bam
         String container_gatk
@@ -143,7 +141,7 @@ workflow unmappedInputToAlignedBAM {
             input:
                 sampleName = sample.name,
                 input_bam = select_first([mapFromPairedFASTQ.output_bam_mapped, mergeMappedAndUnmapped.output_bam_mapped]),
-                flowcell_patterned = flowcell_patterned,
+                flowcell_patterned = sample.flowcell_patterned,
                 # Runtime
                 container = container_gatk,
         }
