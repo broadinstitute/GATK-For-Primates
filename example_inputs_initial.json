@@ -18,7 +18,8 @@
       "RG_PU": "SeqFacil",
       "taxon_group": "bieti",
       "R1": "gs://gatk-contrib/GATKForPrimates/R.bie-2011A089.chr21_seg.R1.fastq.gz",
-      "R2": "gs://gatk-contrib/GATKForPrimates/R.bie-2011A089.chr21_seg.R2.fastq.gz"
+      "R2": "gs://gatk-contrib/GATKForPrimates/R.bie-2011A089.chr21_seg.R2.fastq.gz",
+      "flowcell_patterned": "false"
     },
     {
       "name": "R.bie-2011A106",
@@ -28,7 +29,8 @@
       "RG_PU": "SeqFacil",
       "taxon_group": "bieti",
       "R1": "gs://gatk-contrib/GATKForPrimates/R.bie-2011A106.chr21_seg.R1.fastq.gz",
-      "R2": "gs://gatk-contrib/GATKForPrimates/R.bie-2011A106.chr21_seg.R2.fastq.gz"
+      "R2": "gs://gatk-contrib/GATKForPrimates/R.bie-2011A106.chr21_seg.R2.fastq.gz",
+      "flowcell_patterned": "false"
     },
     {
       "name": "R.bre-2011A082",
@@ -38,7 +40,8 @@
       "RG_PU": "SeqFacil",
       "taxon_group": "brelichi",
       "R1": "gs://gatk-contrib/GATKForPrimates/R.bre-2011A082.chr21_seg.R1.fastq.gz",
-      "R2": "gs://gatk-contrib/GATKForPrimates/R.bre-2011A082.chr21_seg.R2.fastq.gz"
+      "R2": "gs://gatk-contrib/GATKForPrimates/R.bre-2011A082.chr21_seg.R2.fastq.gz",
+      "flowcell_patterned": "false"
     },
     {
       "name": "R.bre-2011A084",
@@ -48,7 +51,8 @@
       "RG_PU": "SeqFacil",
       "taxon_group": "brelichi",
       "R1": "gs://gatk-contrib/GATKForPrimates/R.bre-2011A084.chr21_seg.R1.fastq.gz",
-      "R2": "gs://gatk-contrib/GATKForPrimates/R.bre-2011A084.chr21_seg.R2.fastq.gz"
+      "R2": "gs://gatk-contrib/GATKForPrimates/R.bre-2011A084.chr21_seg.R2.fastq.gz",
+      "flowcell_patterned": "false"
     }
   ],
 
