@@ -49,19 +49,6 @@ workflow unmappedInputToAlignedBAM {
     String execute_aligner = if bwamem2 then bwamem2_commandline else bwa_commandline
 
     ##########################################################################
-    ## Get bwa version. This is really only needed if uBAMs are provided
-    ##########################################################################
-
-    if (!bwamem2) {
-        call alignment.getBwaVersion as getBwaVersion {
-            input:
-                # Runtime options
-                container = container_gitc,
-                path_to_gitc = path_to_gitc,
-        }
-    }
-
-    ##########################################################################
     ## Map either the paired FASTQ or uBAM files for each sample
     ##########################################################################
 
