@@ -119,28 +119,13 @@ workflow unmappedInputToAlignedBAM {
                     path_to_gitc_gatk = path_to_gitc_gatk,
             }
 
-            ## Merge mapped and unmapped BAMs
-            call alignment.mergeMappedAndUnmapped as mergeMappedAndUnmapped{
-                input:
-                    ref = ref,
-                    ref_dict = ref_dict,
-                    ref_fai = ref_fai,
-                    sampleName = sample.name,
-                    unmapped_bam = sample.unmapped_bam,
-                    mapped_unmerged_bam = mapFromUnmappedBAM.output_mapped_unmerged_bam,
-                    execute_aligner = execute_aligner,
-                    bwa_version = getBwaVersion.bwa_version,
-                    # Runtime
-                    container = container_gatk,
-            }
-
         }
 
         ## Run MarkDuplicatesSpark on output BAM; output deduped co-ordinate-sorted BAM
         call processBAMs.markDuplicatesSpark as markDuplicatesSpark {
             input:
                 sampleName = sample.name,
-                input_bam = select_first([mapFromPairedFASTQ.output_bam_mapped, mergeMappedAndUnmapped.output_bam_mapped]),
+                input_bam = select_first([mapFromPairedFASTQ.output_bam_mapped, mapFromUnmappedBAM.output_mapped_and_merged_bam]),
                 flowcell_patterned = sample.flowcell_patterned,
                 # Runtime
                 container = container_gatk,
