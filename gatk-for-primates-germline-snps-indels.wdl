@@ -1,7 +1,6 @@
 version 1.0
 
-## Copyright Broad Institute and Wisconsin National Primate Research Center,
-## University of Wisconsin-Madison, 2021
+## Copyright Broad Institute and Graham L Banes, 2021-2022
 ## 
 ## Complete germline short variant discovery pipeline optimized for
 ## non-human primates, following proposed GATK Best Practices for
@@ -11,11 +10,11 @@ version 1.0
 ## documentation at: https://github.com/broadinstitute/GATK-For-Primates
 ##
 ## Software version requirements :
-## - Cromwell 71
-## - bwa 0.7.17 (note: GITC uses 0.7.15, GATK container has none)
-## - Samtools 1.13 (note: GITC uses 1.11, GATK container uses 1.7)
-## - GATK 4.2.3.0 (note: GATK 4.1.8.0 is used in GITC)
-## - Python 3.9.7
+## - Cromwell 76
+## - bwa 0.7.17 (note: GITC uses 0.7.15-r1140, GATK container has none)
+## - Samtools 1.15 (note: GITC uses 1.11, GATK 4.2.5.0 container uses 1.7)
+## - GATK 4.2.5.0 (note: GATK 4.1.8.0 is used in GITC)
+## - Python 3.10.2
 ##
 ## Program versions can be changed by defining alternative containers.
 ## Runtime parameters are optimized for Terra (https://www.terra.bio/)
@@ -90,9 +89,9 @@ workflow GATKForPrimatesGermlineSNPsIndels_GATK4 {
         Array[scatterInfo]+ scatterList
         
         ## Define containers
-        String container_gatk = "broadinstitute/gatk:4.2.3.0"
+        String container_gatk = "broadinstitute/gatk:4.2.5.0"
         String container_gitc = "us.gcr.io/broad-gotc-prod/genomes-in-the-cloud:2.5.7-2021-06-09_16-47-48Z"
-        String container_python = "python:3.9.7"
+        String container_python = "python:3.10.2"
 
         ## Define paths
         String path_to_gitc = "/usr/gitc/"
