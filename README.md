@@ -50,11 +50,11 @@ At the conclusion of `final` mode, all samples are re-genotyped at the passing l
 ## Requirements
 
 ### Software version requirements :
-- GATK 4.2.3.0
-- Samtools 1.13
+- GATK 4.2.5.0
+- Samtools 1.15
 - bwa 0.7.17
-- Python 3.9.7
-- Cromwell 71 (using WDL 1.0)
+- Python 3.10.2
+- Cromwell 76 (using WDL 1.0)
 - Docker support
 
 ### Input requirements/expectations:
@@ -149,9 +149,9 @@ Other options are available for advanced users; specifically, to configure the r
 - If no truth sets are provided, or if only one truth set is provided, multi-allelic variants are first split to be biallelic (using `LeftAlignAndTrimVariants`) and then split into separate SNP and Indel files (using `SplitVcfs`). This is imperative, else — at least in allele-specific mode — [mixed sites will fail to be processed correctly](https://gatk.broadinstitute.org/hc/en-us/articles/360035890551?id=9622). If both truth sets are provided, the unfiltered variants are recalibrated with `ApplyVQSR` run in series, as recommended.
 - The --merge-contigs-into-num-partitions parameter is set to 0 (default), but can (and probably should) be configured to a higher value in the input JSON [as explained here](https://gatk.broadinstitute.org/hc/en-us/articles/360056138571-GDBI-usage-and-performance-guidelines). We are still determining best practices for handling this when large numbers of contigs are in use, or when scatters/interval lists split scaffolds into smaller contigs. Note that this parameter requires whole contigs versus intervals.
 - Re-genotyping at the final callset capitalizes on the `--include-non-variant-sites` option in `GenotypeGVCFs` [as implemented in GATK 4.0.12.0](https://github.com/broadinstitute/gatk/releases/tag/4.0.12.0).
-- The pipeline currently uses the Broad's production container for 'Genomes in the Cloud', which uses outdated versions of all tools (_i.e._ GATK 4.1.8.0 versus 4.2.0.0; bwa 0.7.15 versus 0.7.17; samtools 1.11 versus 1.12). This container is only used when mapping reads or when running `AnalyzeCovariates`. Eventually, we'll replace this with a new container comprising the latest required software versions ([per this issue](https://github.com/broadinstitute/GATK-For-Primates/issues/9)).
+- The pipeline currently uses the Broad's production container for 'Genomes in the Cloud', which uses outdated versions of all tools (_i.e._ GATK 4.1.8.0 versus 4.2.5.0; bwa 0.7.15 versus 0.7.17; samtools 1.11 versus 1.15). This container is only used when mapping reads or when running `AnalyzeCovariates`. Eventually, we'll replace this with a new container comprising the latest required software versions ([per this issue](https://github.com/broadinstitute/GATK-For-Primates/issues/9)).
 - When running `AnalyzeCovariates`, the required 'R' libraries are downloaded and installed each time. This is not optimal!
 
 ## Acknowledgements
 
-This pipeline is a collaborative effort by the [Broad Institute](https://www.broadinstitute.org) ([@bhanugandham](https://github.com/bhanugandham)) and the [Wisconsin National Primate Research Center](https://primate.wisc.edu/) at the [University of Wisconsin—Madison](https://www.wisc.edu/) ([@grahamlbanes](https://github.com/grahamlbanes)), with support in part by the Office of the Director, [National Institutes of Health](https://www.nih/gov/) (P51OD011106). Development was partially facilitated by the compute resources and assistance of the [UW-Madison Center For High Throughput Computing (CHTC)](https://chtc.cs.wisc.edu) in the Department of Computer Sciences. The CHTC is supported by UW-Madison, the [Advanced Computing Initiative](https://aci.wisc.edu), the [Wisconsin Alumni Research Foundation](https://www.warf.org/), the [Wisconsin Institutes for Discovery](https://discovery.wisc.edu), and the [National Science Foundation (NSF)](https://www.nsf.gov/), and is an active member of the [Open Science Grid](https://opensciencegrid.org), which is supported by NSF and the [U.S. Department of Energy's Office of Science](https://www.energy.gov/science/office-science).
+This pipeline is a collaborative effort by the [Broad Institute](https://www.broadinstitute.org) ([@bhanugandham](https://github.com/bhanugandham)) and ([@grahamlbanes](https://github.com/grahamlbanes)), with support from the [Institute of Museum and Library Services](https://www.imls.gov). Development was partially facilitated by the compute resources and assistance of the [Center For High Throughput Computing (CHTC)](https://chtc.cs.wisc.edu) in the Department of Computer Sciences at the [University of Wisconsin-Madison](https://www.wisc.edu/). The CHTC is supported by the [Advanced Computing Initiative](https://aci.wisc.edu), the [Wisconsin Alumni Research Foundation](https://www.warf.org/), the [Wisconsin Institutes for Discovery](https://discovery.wisc.edu), and the [National Science Foundation (NSF)](https://www.nsf.gov/), and is an active member of the [Open Science Grid](https://opensciencegrid.org), which is supported by NSF and the [U.S. Department of Energy's Office of Science](https://www.energy.gov/science/office-science).
