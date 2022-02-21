@@ -117,7 +117,7 @@ workflow GATKForPrimatesOnTerra {
         Array[String]? RG_PG
         Array[String]? RG_PI
         Array[String]? RG_PM
-        Array[String]? flowcell_patterned
+        Array[String] flowcell_patterned
 
     }
 
