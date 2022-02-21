@@ -1,12 +1,14 @@
 version 1.0
 
-## Copyright Broad Institute and Wisconsin National Primate Research Center,
-## University of Wisconsin-Madison, 2021
+## Copyright Broad Institute and Graham L Banes, 2021-2022
 ## 
 ## Structs from the complete germline short variant discovery pipeline
 ## optimized for non-human primates. For requirements, expectations and
 ## outputs, please review the complete documentation at:
 ## https://github.com/broadinstitute/GATK-For-Primates
+##
+## For requirements, expectations and outputs, please review the complete
+## documentation at: https://github.com/broadinstitute/GATK-For-Primates
 ##
 ## LICENSING : 
 ## This script is released under the WDL source code license (BSD-3) (see LICENSE in 
@@ -14,6 +16,7 @@ version 1.0
 ## subject to different licenses. Users are responsible for checking that they are
 ## authorized to run all programs before running this script. Please see the docker
 ## containers for detailed licensing information pertaining to the included programs.
+
 
 struct sampleInfo {
     String name
@@ -35,6 +38,7 @@ struct sampleInfo {
     String? RG_PG
     String? RG_PI
     String? RG_PM
+    Boolean? flowcell_patterned
 }
 
 struct scatterInfo {
