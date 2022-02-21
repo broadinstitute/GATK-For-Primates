@@ -38,7 +38,7 @@ struct sampleInfo {
     String? RG_PG
     String? RG_PI
     String? RG_PM
-    Boolean? flowcell_patterned
+    Boolean flowcell_patterned
 }
 
 struct scatterInfo {
