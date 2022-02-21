@@ -49,7 +49,7 @@ workflow unmappedInputToAlignedBAM {
     String execute_aligner = if bwamem2 then bwamem2_commandline else bwa_commandline
 
     ##########################################################################
-    ## Map either the paired FASTQ or uBAM files for each sample
+    ## Map either FASTQ or uBAM files for each sample
     ##########################################################################
 
     ## Scatter over each sample
@@ -58,7 +58,7 @@ workflow unmappedInputToAlignedBAM {
         # If no uBAM is available, map the FASTQ files
         if (!defined(sample.unmapped_bam) || (sample.unmapped_bam == "NULL")) {
 
-            call alignment.mapFromPairedFASTQ as mapFromPairedFASTQ{
+            call alignment.mapFromPairedOrUnpairedFASTQ as mapFromPairedOrUnpairedFASTQ{
                 input:
                     ref = ref,
                     ref_dict = ref_dict,
@@ -112,7 +112,7 @@ workflow unmappedInputToAlignedBAM {
         call processBAMs.markDuplicatesSpark as markDuplicatesSpark {
             input:
                 sampleName = sample.name,
-                input_bam = select_first([mapFromPairedFASTQ.output_bam_mapped, mapFromUnmappedBAM.output_mapped_and_merged_bam]),
+                input_bam = select_first([mapFromPairedOrUnpairedFASTQ.output_bam_mapped, mapFromUnmappedBAM.output_mapped_and_merged_bam]),
                 flowcell_patterned = sample.flowcell_patterned,
                 # Runtime
                 container = container_gatk,
